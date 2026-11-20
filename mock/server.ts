@@ -123,7 +123,8 @@ export function createMockNelson(opts: { now?: () => Date } = {}) {
       let body: unknown = undefined;
       try { body = raw ? JSON.parse(raw) : undefined; } catch { body = Symbol("bad json"); }
       const key = req.headers["idempotency-key"] as string | undefined;
-      const idem = key ? `${req.method} ${url.pathname} ${key}` : null;
+      // Events are checked for their signature every time and deduped by event id, so they skip the replay cache.
+      const idem = key && url.pathname !== "/api/v1/events" ? `${req.method} ${url.pathname} ${key}` : null;
       if (typeof body === "symbol") answer = { status: 400, body: { error: "invalid_json" } };
       else if (req.method === "POST" && (!key || key.length < 8)) answer = { status: 400, body: { error: "idempotency_key_required" } };
       else if (idem && seen.has(idem)) answer = seen.get(idem)!;

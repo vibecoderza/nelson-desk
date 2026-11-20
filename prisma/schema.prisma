@@ -1,0 +1,923 @@
+// Nelson Desk and Portal. Postgres, own Neon project (brief 7.4).
+// Money is integer cents, ZAR. Time is stored UTC and shown SAST. Every table has id, created_at, updated_at.
+// After changing a table, run `npm run db:sql` to write the next migration.
+//
+// Staff-only data (supplier, cost, margin) lives only on quote_line_staff, quote_version_staff and
+// order_line_staff. The Portal reads through the `portal` schema's views (prisma/migrations/0002_walls), which do
+// not include them.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum QuoteState {
+  draft
+  working
+  final
+  accepted
+  declined
+  expired
+}
+
+enum LineState {
+  agreed
+  waiting_on_nelson
+  nelson_suggests
+  waiting_on_supplier
+}
+
+enum AmendmentState {
+  waiting
+  accepted
+  suggested
+  declined
+  superseded
+}
+
+enum OrderState {
+  paid
+  proof_with_nelson
+  proof_with_client
+  signed
+  in_production
+  dispatched
+  delivered
+  cancelled
+}
+
+enum ProofState {
+  awaiting_sheet
+  with_nelson
+  with_client
+  signed
+}
+
+enum ClientRole {
+  owner
+  buyer
+  viewer
+}
+
+enum EventAudience {
+  staff
+  both
+}
+
+enum OutboxStatus {
+  pending
+  done
+  failed
+}
+
+// ---- Clients ----
+
+model Client {
+  id                  String   @id
+  name                String
+  status              String   @default("active") // draft | active
+  clerk_org_id        String?  @unique
+  email_domain        String?
+  shopify_customer_id String?
+  reorder_window_days Int?
+  auto_mockups_paused Boolean  @default(false)
+  people              Person[]
+  quotes              Quote[]
+  orders              Order[]
+  created_at          DateTime @default(now())
+  updated_at          DateTime @default(now()) @updatedAt
+
+  @@map("client")
+}
+
+model Person {
+  id            String       @id
+  client_id     String
+  client        Client       @relation(fields: [client_id], references: [id])
+  name          String
+  email         String?
+  clerk_user_id String?      @unique
+  roles         PersonRole[]
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@map("person")
+}
+
+model PersonRole {
+  id                String     @id
+  person_id         String
+  person            Person     @relation(fields: [person_id], references: [id])
+  role              ClientRole
+  spend_limit_cents Int? // Buyer only
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @default(now()) @updatedAt
+
+  @@unique([person_id])
+  @@map("person_role")
+}
+
+model Address {
+  id                String   @id
+  client_id         String
+  label             String?
+  line1             String
+  line2             String?
+  suburb            String?
+  city              String
+  province          String
+  postal_code       String
+  country           String   @default("ZA")
+  receiving_contact String?
+  receiving_phone   String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@map("address")
+}
+
+model Project {
+  id           String   @id
+  client_id    String
+  name         String
+  budget_cents Int?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@map("project")
+}
+
+model ClientSource {
+  id                  String    @id
+  client_id           String    @unique
+  first_touch         String // chatgpt | instagram | google_search | whatsapp_referral | direct | other
+  posthog_distinct_id String?
+  consent_at          DateTime?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+
+  @@map("client_source")
+}
+
+model ClientNote {
+  id              String   @id
+  client_id       String
+  author_staff_id String
+  body            String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@map("client_note")
+}
+
+// ---- Channels ----
+
+model ChannelIdentity {
+  id             String    @id
+  person_id      String?
+  client_id      String?
+  channel        String // email | whatsapp
+  address        String
+  verified_at    DateTime?
+  opt_in_wording String?
+  opt_in_at      DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
+
+  @@unique([channel, address])
+  @@map("channel_identity")
+}
+
+model Conversation {
+  id              String    @id
+  client_id       String?
+  quote_id        String?
+  channel         String // email | whatsapp | portal | form
+  subject         String?
+  last_message_at DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@map("conversation")
+}
+
+model Message {
+  id               String   @id
+  conversation_id  String
+  direction        String // in | out
+  author_person_id String?
+  author_staff_id  String?
+  author_agent_id  String?
+  body             String
+  external_id      String?  @unique
+  sent_at          DateTime
+  created_at       DateTime @default(now())
+  updated_at       DateTime @default(now()) @updatedAt
+
+  @@index([conversation_id, sent_at])
+  @@map("message")
+}
+
+model Attachment {
+  id           String   @id
+  message_id   String
+  blob_key     String
+  filename     String
+  content_type String
+  bytes        Int
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([message_id])
+  @@map("attachment")
+}
+
+// ---- Enquiries ----
+
+model Enquiry {
+  id              String   @id
+  client_id       String?
+  conversation_id String?
+  channel         String
+  status          String   @default("new") // new | quoted | joined | closed
+  quote_id        String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now()) @updatedAt
+
+  @@index([status])
+  @@map("enquiry")
+}
+
+model Brief {
+  id         String   @id
+  enquiry_id String   @unique
+  fields     Json // agent-read: product codes, quantities, place, deadline, budget
+  confidence Float?
+  agent_id   String?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  @@map("brief")
+}
+
+// ---- Quotes ----
+
+model Quote {
+  id             String         @id
+  ref            String         @unique // Q-00007
+  client_id      String
+  client         Client         @relation(fields: [client_id], references: [id])
+  project_id     String?
+  title          String?
+  state          QuoteState     @default(draft)
+  version        Int            @default(0)
+  valid_until    DateTime?
+  first_sent_at  DateTime?
+  last_sent_at   DateTime?
+  seen_opened_at DateTime? // the portal page opening, never email tracking
+  seen_video_at  DateTime?
+  versions       QuoteVersion[]
+  lines          QuoteLine[]
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@index([state])
+  @@map("quote")
+}
+
+model QuoteVersion {
+  id               String    @id
+  quote_id         String
+  quote            Quote     @relation(fields: [quote_id], references: [id])
+  version          Int
+  sent_at          DateTime? // immutable once set (trigger in 0002_walls)
+  snapshot         Json // lines, terms and total as the client saw them. Customer view only
+  price_customer   Json // Nelson's whole customer-view answer
+  price_version    String
+  total_cents      Int
+  change_log       Json      @default("[]")
+  pdf_key          String?
+  mockup_keys      Json      @default("[]")
+  sent_by_staff_id String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
+
+  @@unique([quote_id, version])
+  @@map("quote_version")
+}
+
+model QuoteVersionStaff {
+  id               String   @id
+  quote_version_id String   @unique
+  price_staff      Json // Nelson's whole staff-view answer. Desk only
+  created_at       DateTime @default(now())
+  updated_at       DateTime @default(now()) @updatedAt
+
+  @@map("quote_version_staff")
+}
+
+model QuoteLine {
+  id                  String    @id
+  quote_id            String
+  quote               Quote     @relation(fields: [quote_id], references: [id])
+  position            Int
+  product_code        String // ours, never a supplier's
+  product_name        String
+  colour              String
+  quantity            Int
+  design_ref          String?
+  design_rev          Int?
+  decoration          Json      @default("[]")
+  state               LineState @default(agreed)
+  price_status        String    @default("priced") // priced | quote_only | needs_human
+  unit_cents          Int?
+  setup_cents         Int?
+  line_total_cents    Int?
+  price_version       String?
+  manual_price_by     String? // Alan's name, when a needs_human line takes a manual price
+  manual_price_reason String?
+  due_date            DateTime? // the "Due 2 Dec" on a waiting_on_supplier line
+  removed_at          DateTime?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+
+  @@index([quote_id])
+  @@map("quote_line")
+}
+
+model QuoteLineStaff {
+  id                  String    @id
+  quote_line_id       String    @unique
+  supplier            String
+  supplier_code       String
+  stock               Int?
+  incoming_stock      Json      @default("[]")
+  unit_cost_cents     Int?
+  branding_cost_cents Int?
+  markup_applied_pct  Float?
+  margin_cents        Int?
+  margin_pct          Float?
+  stock_checked_at    DateTime?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+
+  @@map("quote_line_staff")
+}
+
+model Amendment {
+  id                     String         @id
+  quote_line_id          String
+  state                  AmendmentState @default(waiting)
+  kind                   String // design | quantity | colour | words
+  design_ref             String?
+  design_rev             Int?
+  requested              Json // what the client asked for
+  design_check           Json? // nelson.design-check/1
+  suggestion             String?
+  decline_reason         String?
+  requested_by_person_id String?
+  answered_by_staff_id   String?
+  answered_at            DateTime?
+  created_at             DateTime       @default(now())
+  updated_at             DateTime       @default(now()) @updatedAt
+
+  @@index([quote_line_id])
+  @@index([state])
+  @@map("amendment")
+}
+
+model FollowUp {
+  id               String    @id
+  quote_id         String
+  kind             String // check_in | video_ask
+  due_on           DateTime
+  sent_at          DateTime?
+  sent_by_staff_id String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
+
+  @@unique([quote_id, kind])
+  @@map("follow_up")
+}
+
+model Decline {
+  id           String   @id
+  quote_id     String
+  version      Int
+  reason       String
+  budget_cents Int?
+  note         String?
+  person_id    String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([quote_id])
+  @@map("decline")
+}
+
+// ---- Suppliers ----
+
+model Supplier {
+  id                  String   @id
+  name                String
+  kind                String // linked | manual
+  email               String?
+  answer_window_hours Int      @default(24)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @default(now()) @updatedAt
+
+  @@map("supplier")
+}
+
+model CostingRequest {
+  id               String    @id
+  ref              String    @unique // CR-0031
+  supplier_id      String
+  quote_line_id    String
+  state            String    @default("out") // out | answered | late | cancelled
+  pack             Json // artwork, mockup, size sheet in mm, quantities, date. No client name, no prices
+  reply_token_hash String    @unique
+  sent_at          DateTime?
+  answer_due_at    DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
+
+  @@index([state])
+  @@map("costing_request")
+}
+
+model CostingAnswer {
+  id                  String   @id
+  costing_request_id  String   @unique
+  breaks              Json // [{min_quantity, unit_cost_cents}]
+  setup_cost_cents    Int?
+  answered_at         DateTime
+  entered_by_staff_id String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @default(now()) @updatedAt
+
+  @@map("costing_answer")
+}
+
+// ---- Orders ----
+
+model Order {
+  id               String      @id
+  ref              String      @unique // N-1042
+  client_id        String
+  client           Client      @relation(fields: [client_id], references: [id])
+  source           String // cart | quote
+  quote_id         String?
+  quote_version    Int?
+  nelson_order_ref String      @unique
+  shop_order_name  String?
+  state            OrderState  @default(paid)
+  on_hold          Boolean     @default(false)
+  pack_status      String? // mirror of Nelson's order_packs.status. Nelson writes it
+  total_cents      Int
+  target_date      DateTime? // from Nelson's delivery estimate. The Desk never invents a date
+  signed_at        DateTime?
+  ship_to          Json
+  lines            OrderLine[]
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@index([state])
+  @@map("order")
+}
+
+model OrderLine {
+  id               String   @id
+  order_id         String
+  order            Order    @relation(fields: [order_id], references: [id])
+  position         Int
+  product_code     String
+  product_name     String
+  colour           String
+  quantity         Int
+  design_ref       String
+  design_rev       Int
+  unit_cents       Int
+  setup_cents      Int
+  line_total_cents Int
+  created_at       DateTime @default(now())
+  updated_at       DateTime @default(now()) @updatedAt
+
+  @@index([order_id])
+  @@map("order_line")
+}
+
+model OrderLineStaff {
+  id                  String   @id
+  order_line_id       String   @unique
+  supplier            String
+  supplier_code       String
+  supplier_ref        String? // the supplier's order number, e.g. on the supply chain panel
+  pack_id             String?
+  unit_cost_cents     Int?
+  branding_cost_cents Int?
+  freight_cost_cents  Int?
+  margin_cents        Int?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @default(now()) @updatedAt
+
+  @@map("order_line_staff")
+}
+
+model Payment {
+  id                  String    @id
+  order_id            String?
+  quote_id            String?
+  method              String // card | eft
+  kind                String // deposit | full
+  amount_cents        Int
+  reference           String?
+  state               String    @default("received") // expected | received | refunded
+  received_at         DateTime?
+  matched_by_staff_id String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+
+  @@index([order_id])
+  @@map("payment")
+}
+
+model InvoiceLink {
+  id              String    @id
+  order_id        String
+  xero_invoice_id String    @unique
+  xero_number     String?
+  state           String // draft | authorised | paid | overdue | voided
+  amount_cents    Int
+  due_on          DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @default(now()) @updatedAt
+
+  @@index([order_id])
+  @@map("invoice_link")
+}
+
+model Proof {
+  id                   String     @id
+  ref                  String     @unique // PP-1042
+  order_id             String     @unique
+  state                ProofState @default(awaiting_sheet)
+  round                Int        @default(0)
+  sheet_key            String?
+  sheet_sha256         String?
+  upload_token_hash    String?    @unique
+  approved_by_staff_id String?
+  with_client_at       DateTime?
+  change_note          String?
+  created_at           DateTime   @default(now())
+  updated_at           DateTime   @default(now()) @updatedAt
+
+  @@map("proof")
+}
+
+model Signature {
+  id            String   @id
+  proof_id      String
+  round         Int
+  person_id     String
+  name          String
+  signature     String
+  signed_at     DateTime
+  ip            String
+  user_agent    String
+  words_shown   String
+  checks        Json
+  sheet_sha256  String
+  record_sha256 String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+
+  @@unique([proof_id, round])
+  @@map("signature")
+}
+
+model Shipment {
+  id            String    @id
+  order_id      String
+  courier       String
+  service       String?
+  waybill       String
+  cartons       Int?
+  tracking_url  String?
+  dispatched_at DateTime?
+  delivered_at  DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now()) @updatedAt
+
+  @@index([order_id])
+  @@map("shipment")
+}
+
+model ShipmentEvent {
+  id          String   @id
+  shipment_id String
+  status      String
+  description String?
+  occurred_at DateTime
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+
+  @@index([shipment_id, occurred_at])
+  @@map("shipment_event")
+}
+
+model Hold {
+  id                 String    @id
+  order_id           String
+  reason             String
+  placed_by_staff_id String
+  released_at        DateTime?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @default(now()) @updatedAt
+
+  @@index([order_id])
+  @@map("hold")
+}
+
+// ---- Brand ----
+
+model BrandKit {
+  id          String   @id
+  client_id   String   @unique
+  source_kind String? // guide | website
+  status      String   @default("draft")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+
+  @@map("brand_kit")
+}
+
+model BrandLogo {
+  id           String   @id
+  brand_kit_id String
+  name         String
+  kind         String // vector | pixels
+  blob_key     String
+  confirmed    Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([brand_kit_id])
+  @@map("brand_logo")
+}
+
+model BrandColour {
+  id             String   @id
+  brand_kit_id   String
+  name           String
+  hex            String
+  nearest_thread String?
+  confirmed      Boolean  @default(false)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @default(now()) @updatedAt
+
+  @@index([brand_kit_id])
+  @@map("brand_colour")
+}
+
+model BrandFont {
+  id           String   @id
+  brand_kit_id String
+  family       String
+  use          String?
+  confirmed    Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([brand_kit_id])
+  @@map("brand_font")
+}
+
+model BrandRule {
+  id           String   @id
+  brand_kit_id String
+  text         String
+  confirmed    Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([brand_kit_id])
+  @@map("brand_rule")
+}
+
+model ArtworkFile {
+  id           String   @id
+  client_id    String
+  blob_key     String
+  filename     String
+  origin       String   @default("client") // client | nelson (redraws)
+  check_result Json? // vector or pixels, sharpest print size, colour count
+  needs_redraw Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@map("artwork_file")
+}
+
+model StoreItem {
+  id               String   @id
+  client_id        String
+  kind             String // saved | ordered | auto_mockup
+  product_code     String
+  design_ref       String?
+  design_rev       Int?
+  mockup_key       String?
+  guide_unit_cents Int? // a guide at guide_quantity, from Nelson's ladder
+  guide_quantity   Int?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @default(now()) @updatedAt
+
+  @@index([client_id])
+  @@map("store_item")
+}
+
+// ---- Messaging ----
+
+model Notification {
+  id           String    @id
+  event_id     String
+  person_id    String?
+  party        String    @default("client") // client | supplier | print_house | staff
+  channel      String // email | whatsapp | portal
+  template_key String
+  status       String    @default("queued") // queued | sent | delivered | read | failed
+  external_id  String?
+  sent_at      DateTime?
+  read_at      DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @default(now()) @updatedAt
+
+  @@index([event_id])
+  @@index([person_id])
+  @@map("notification")
+}
+
+model Template {
+  id            String   @id
+  key           String   @unique
+  channel       String
+  whatsapp_name String?
+  category      String?
+  approval      String? // pending | approved | rejected
+  body          String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+
+  @@map("template")
+}
+
+model Preference {
+  id         String   @id
+  person_id  String
+  kind       String // per kind of update
+  channel    String
+  enabled    Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  @@unique([person_id, kind, channel])
+  @@map("preference")
+}
+
+// ---- Platform ----
+
+model Event {
+  id           String        @id
+  type         String
+  subject_type String
+  subject_id   String
+  client_id    String?
+  audience     EventAudience @default(staff) // "both" events are read by the Portal and must be portal-safe
+  data         Json          @default("{}")
+  actor        String // auto | staff | client
+  actor_id     String?
+  occurred_at  DateTime
+  due_at       DateTime? // Today is a query over open events with a due time
+  resolved_at  DateTime?
+  outbox       Outbox[]
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @default(now()) @updatedAt
+
+  @@index([subject_type, subject_id, occurred_at])
+  @@index([client_id, occurred_at])
+  @@index([resolved_at, due_at])
+  @@map("event")
+}
+
+model Outbox {
+  id              String       @id
+  event_id        String
+  event           Event        @relation(fields: [event_id], references: [id])
+  kind            String // notify | nelson_event | xero
+  payload         Json
+  status          OutboxStatus @default(pending)
+  attempts        Int          @default(0)
+  next_attempt_at DateTime
+  locked_until    DateTime?
+  last_error      String?
+  done_at         DateTime?
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @default(now()) @updatedAt
+
+  @@index([status, next_attempt_at])
+  @@map("outbox")
+}
+
+model WebhookInbox {
+  id           String    @id
+  source       String // nelson | whatsapp | resend | courier | xero | clerk
+  external_id  String
+  type         String
+  payload      Json
+  received_at  DateTime
+  processed_at DateTime?
+  error        String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @default(now()) @updatedAt
+
+  @@unique([source, external_id])
+  @@map("webhook_inbox")
+}
+
+model StaffUser {
+  id            String   @id
+  email         String   @unique
+  name          String
+  role          String   @default("owner")
+  clerk_user_id String?  @unique
+  enabled       Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+
+  @@map("staff_user")
+}
+
+model Agent {
+  id         String   @id
+  name       String
+  job        String
+  key_hash   String   @unique
+  scopes     Json     @default("[]")
+  enabled    Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  @@map("agent")
+}
+
+model AgentLog {
+  id           String   @id
+  agent_id     String
+  action       String
+  subject_type String?
+  subject_id   String?
+  detail       Json     @default("{}")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([agent_id, created_at])
+  @@map("agent_log")
+}
+
+model AuditLog {
+  id           String   @id
+  actor        String
+  actor_id     String?
+  action       String
+  subject_type String?
+  subject_id   String?
+  detail       Json     @default("{}")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@index([subject_type, subject_id])
+  @@map("audit_log")
+}
+
+model Setting {
+  id                  String   @id
+  key                 String   @unique
+  value               Json
+  updated_by_staff_id String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @default(now()) @updatedAt
+
+  @@map("setting")
+}
