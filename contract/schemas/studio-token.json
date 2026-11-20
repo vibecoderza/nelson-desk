@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/studio-token.json",
+  "type": "object",
+  "properties": {
+    "token": {
+      "type": "string",
+      "minLength": 1
+    },
+    "audience": {
+      "const": "studio"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "client_id": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "token",
+    "audience",
+    "expires_at",
+    "client_id"
+  ],
+  "additionalProperties": false,
+  "title": "Portal token for the studio host",
+  "description": "Fifteen minutes, audience studio, signed with PORTAL_TOKEN_SIGNING_KEY."
+}

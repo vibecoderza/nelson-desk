@@ -1,0 +1,39 @@
+{
+  "description": "Fixture file to the schema it must satisfy. `portal_safe` fixtures are what a client may receive: the exposure test walks them for private keys.",
+  "fixtures": {
+    "price-request.json": "price-request.json",
+    "price-response.staff.json": "price-response-staff.json",
+    "price-response.customer.json": "price-response-customer.json",
+    "price-response.needs-human.customer.json": "price-response-customer.json",
+    "delivery-estimate-request.json": "delivery-estimate-request.json",
+    "delivery-estimate-response.json": "delivery-estimate-response.json",
+    "order-from-quote-request.json": "order-from-quote-request.json",
+    "order-from-quote-response.json": "order-from-quote-response.json",
+    "price-changed.json": "price-changed.json",
+    "order-mark-paid-request.json": "order-mark-paid-request.json",
+    "order-status-request.in-production.json": "order-status-request.json",
+    "order-status-request.dispatched.json": "order-status-request.json",
+    "order-ack.json": "order-ack.json",
+    "brand-kit.json": "brand-kit.json",
+    "studio-token.json": "studio-token.json",
+    "event.cost-moved.json": "event.json",
+    "event.design-saved.json": "event.json",
+    "event.order-cancelled.json": "event.json",
+    "event.order-pack-status-changed.json": "event.json",
+    "event.order-paid.json": "event.json",
+    "event.proof-signed.json": "event.json",
+    "event.quote-accepted.json": "event.json",
+    "event.quote-basket-added.json": "event.json",
+    "event.quote-declined.json": "event.json",
+    "event.quote-expired.json": "event.json",
+    "event.quote-sent.json": "event.json"
+  },
+  "portal_safe": [
+    "price-response.customer.json",
+    "price-response.needs-human.customer.json",
+    "delivery-estimate-response.json",
+    "order-from-quote-response.json",
+    "brand-kit.json",
+    "studio-token.json"
+  ]
+}

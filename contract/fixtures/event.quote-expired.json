@@ -1,0 +1,15 @@
+{
+  "schema": "nelson.event/1",
+  "id": "ev_01JD3QUOTEEXPIRED1",
+  "type": "quote.expired",
+  "occurred_at": "2026-11-21T08:14:05Z",
+  "subject": {
+    "type": "quote",
+    "id": "Q-00009"
+  },
+  "data": {
+    "quote_ref": "Q-00009",
+    "version": 2,
+    "cause": "no_reply"
+  }
+}

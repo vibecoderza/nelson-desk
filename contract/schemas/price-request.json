@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/price-request.json",
+  "type": "object",
+  "properties": {
+    "quote_ref": {
+      "$ref": "common.json#/$defs/quote_ref"
+    },
+    "currency": {
+      "const": "ZAR"
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "product_code": {
+            "$ref": "common.json#/$defs/product_code"
+          },
+          "colour": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "decoration": {
+            "type": "array",
+            "items": {
+              "$ref": "common.json#/$defs/decoration"
+            }
+          },
+          "design": {
+            "$ref": "common.json#/$defs/design_pin"
+          },
+          "manual_cost": {
+            "type": "object",
+            "properties": {
+              "costing_request": {
+                "type": "string",
+                "pattern": "^CR-[0-9]{4,}$"
+              },
+              "breaks": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "min_quantity": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "unit_cost_cents": {
+                      "$ref": "common.json#/$defs/cents"
+                    }
+                  },
+                  "required": [
+                    "min_quantity",
+                    "unit_cost_cents"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "setup_cost_cents": {
+                "$ref": "common.json#/$defs/cents"
+              }
+            },
+            "required": [
+              "costing_request",
+              "breaks"
+            ],
+            "additionalProperties": false,
+            "description": "A cost from a manual supplier's answer. Nelson applies the master rule to it; the Desk never does."
+          }
+        },
+        "required": [
+          "line_id",
+          "product_code",
+          "colour",
+          "quantity",
+          "decoration"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "delivery_address": {
+      "$ref": "common.json#/$defs/address"
+    }
+  },
+  "required": [
+    "currency",
+    "lines"
+  ],
+  "additionalProperties": false,
+  "title": "POST /api/v1/price request"
+}

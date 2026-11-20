@@ -1,0 +1,338 @@
+openapi: 3.1.0
+info:
+  title: Nelson and Nelson Desk contract
+  version: 1.0.0-draft.1
+  summary: The one seam between Nelson (catalogue, customiser, price, order pack) and the Desk and Portal.
+  description: |
+    Brief section 6. HTTPS JSON and signed webhooks. The Desk never connects to Nelson's Neon and Nelson never
+    reads the Desk's database.
+
+    Three rules hold the seam: one price rule (the Desk asks Nelson for every price and holds no formula), one
+    product truth (Shopify plus Nelson's spec, by our product code), one order file (`nelson.order-pack/1`).
+
+    Money is integer cents, ZAR. There is no VAT field anywhere. Times are UTC, ISO 8601.
+
+    Change control (6.8): paths start `/api/v1`. Additive changes keep `/1`; a removed or renamed field is `/2`
+    with both live until the Desk moves.
+
+    Status: draft, written by the Desk thread from the brief. Nelson builds the `nelson` paths after the 27 Nov
+    freeze; until then `npm run mock` answers them from `contract/fixtures`.
+servers:
+  - url: https://studio.dearnelson.co.za
+    description: Nelson studio host (placeholder hostname until Nelson confirms it)
+  - url: https://desk.dearnelson.co.za
+    description: Nelson Desk
+tags:
+  - name: nelson
+    description: Nelson builds these. The Desk calls them with its key.
+  - name: customiser
+    description: The customiser thread builds these (brief 6.3). Schemas are provisional until it publishes its own.
+  - name: desk
+    description: The Desk builds these. Nelson and the customiser call them.
+security:
+  - deskKey: []
+
+paths:
+  /api/v1/spec:
+    get:
+      tags: [nelson]
+      operationId: getSpec
+      summary: The public product document, by our product code
+      description: Exists today. Returns `publicProduct` only; the Desk treats it as opaque beyond `product.code`.
+      parameters:
+        - { name: code, in: query, required: true, schema: { $ref: "./schemas/common.json#/$defs/product_code" } }
+      responses:
+        "200":
+          description: The public document
+          content:
+            application/json:
+              schema: { type: object, required: [product], properties: { product: { type: object, required: [code], properties: { code: { type: string } } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/price:
+    post:
+      tags: [nelson]
+      operationId: postPrice
+      summary: The price for any set of lines. The only source of a price.
+      description: |
+        Two views of one answer. The customer view is the default. `view=staff` needs a staff-scope key and adds
+        supplier, stock, cost, mark-up applied and margin under `staff` keys. The Portal only ever receives the
+        customer view. `price_version` changes when any cost, tier or rule behind a price changes; a sent quote
+        version stores the whole response.
+      security:
+        - deskKey: []
+        - staffKey: []
+      parameters:
+        - name: view
+          in: query
+          schema: { enum: [customer, staff], default: customer }
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/price-request.json" }
+      responses:
+        "200":
+          description: Priced. `needs_human` and `quote_only` lines come back with null amounts.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "./schemas/price-response-customer.json" }
+                  - { $ref: "./schemas/price-response-staff.json" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403":
+          description: Staff view asked for without a staff-scope key
+          content: { application/json: { schema: { $ref: "./schemas/common.json#/$defs/error" } } }
+
+  /api/v1/delivery-estimate:
+    post:
+      tags: [nelson]
+      operationId: postDeliveryEstimate
+      summary: Production days, transit days, target date and freight options
+      description: Nelson owns the lead-time table and the South African holiday calendar. The Desk never invents a date.
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "./schemas/delivery-estimate-request.json" } } }
+      responses:
+        "200":
+          description: The estimate
+          content: { application/json: { schema: { $ref: "./schemas/delivery-estimate-response.json" } } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/v1/orders/from-quote:
+    post:
+      tags: [nelson]
+      operationId: postOrderFromQuote
+      summary: Turn an accepted quote version into a Shopify draft order and a pay link
+      description: Nelson re-checks every price. A mismatch is `409 price_changed` and nothing is created.
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "./schemas/order-from-quote-request.json" } } }
+      responses:
+        "201":
+          description: Draft order created
+          content: { application/json: { schema: { $ref: "./schemas/order-from-quote-response.json" } } }
+        "409":
+          description: A price moved since the version was sent
+          content: { application/json: { schema: { $ref: "./schemas/price-changed.json" } } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/v1/orders/{ref}/mark-paid:
+    post:
+      tags: [nelson]
+      operationId: postOrderMarkPaid
+      summary: Alan matched an EFT. Nelson marks the Shopify order paid and builds the pack.
+      description: One path for card and EFT. `order.paid` follows as an event either way.
+      security: [{ staffKey: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/OrderRef" }
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "./schemas/order-mark-paid-request.json" } } }
+      responses:
+        "200":
+          description: Marked paid
+          content: { application/json: { schema: { $ref: "./schemas/order-ack.json" } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/orders/{ref}/status:
+    post:
+      tags: [nelson]
+      operationId: postOrderStatus
+      summary: The two Alan clicks, supplier order placed and waybill saved
+      description: Pack status keeps one writer. `order_pack.status_changed` follows as an event.
+      security: [{ staffKey: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/OrderRef" }
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "./schemas/order-status-request.json" } } }
+      responses:
+        "200":
+          description: Status written
+          content: { application/json: { schema: { $ref: "./schemas/order-ack.json" } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/events:
+    post:
+      tags: [nelson]
+      operationId: postEventToNelson
+      summary: Desk to Nelson events
+      description: "`quote.sent`, `quote.accepted`, `quote.declined`, `quote.expired`, `proof.signed`. Signed; deduped by `id`."
+      security: [{ eventSignature: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Signature" }
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "./schemas/event.json" } } }
+      responses:
+        "202": { description: Accepted, or already seen }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/design:
+    get:
+      tags: [customiser]
+      operationId: getDesign
+      summary: A design by ref and revision (`nelson.design/1`)
+      parameters:
+        - { name: ref, in: query, required: true, schema: { type: string } }
+        - { name: rev, in: query, schema: { type: integer, minimum: 1 }, description: Omit for the latest. A quote line and an order always pin one. }
+      responses:
+        "200":
+          description: The design
+          content: { application/json: { schema: { $ref: "./schemas/customiser-provisional.json#/$defs/design" } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/design-check:
+    post:
+      tags: [customiser]
+      operationId: postDesignCheck
+      summary: Pass or fail with stable codes and the limit that failed (`nelson.design-check/1`)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [design], properties: { design: { $ref: "./schemas/common.json#/$defs/design_pin" } } } } }
+      responses:
+        "200":
+          description: The check
+          content: { application/json: { schema: { $ref: "./schemas/customiser-provisional.json#/$defs/design_check" } } }
+
+  /api/mockups:
+    post:
+      tags: [customiser]
+      operationId: postMockups
+      summary: Mockups per colour and angle (`nelson.mockup-set/1`)
+      description: Takes a pinned design, or `{product_code, logo, colours}` for the mockup runner. URLs are signed and short-lived; the Desk snapshots them into its own private store when a version is sent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: object, required: [design], properties: { design: { $ref: "./schemas/common.json#/$defs/design_pin" } } }
+                - { type: object, required: [product_code, logo, colours], properties: { product_code: { type: string }, logo: { type: string }, colours: { type: array, items: { type: string } } } }
+      responses:
+        "200":
+          description: The mockup set
+          content: { application/json: { schema: { $ref: "./schemas/customiser-provisional.json#/$defs/mockup_set" } } }
+
+  /api/order-pack:
+    get:
+      tags: [customiser]
+      operationId: getOrderPack
+      summary: The order pack (`nelson.order-pack/1`). Staff key only, because it names the supplier.
+      security: [{ staffKey: [] }]
+      parameters:
+        - { name: order, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The pack
+          content: { application/json: { schema: { $ref: "./schemas/customiser-provisional.json#/$defs/order_pack" } } }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/v1/webhooks/nelson:
+    servers: [{ url: https://desk.dearnelson.co.za }]
+    post:
+      tags: [desk]
+      operationId: postEventToDesk
+      summary: Nelson to Desk events
+      description: "`order.paid`, `order_pack.status_changed`, `order.cancelled`, `cost.moved`, `design.saved`, `quote.basket_added`. Signed with `DESK_WEBHOOK_SECRET`; deduped by `id` in `webhook_inbox`."
+      security: [{ eventSignature: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Signature" }
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "./schemas/event.json" } } }
+      responses:
+        "202": { description: Accepted, or already seen }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/v1/brand-kit:
+    servers: [{ url: https://my.dearnelson.co.za }]
+    get:
+      tags: [desk]
+      operationId: getBrandKit
+      summary: A client's brand kit, for the customiser
+      security: [{ studioToken: [] }]
+      parameters:
+        - { name: client, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The kit
+          content: { application/json: { schema: { $ref: "./schemas/brand-kit.json" } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/studio-token:
+    servers: [{ url: https://my.dearnelson.co.za }]
+    post:
+      tags: [desk]
+      operationId: postStudioToken
+      summary: A fifteen-minute token the customiser passes to the studio host
+      description: The Portal owns client sign-in. No shared cookies across domains; the customiser holds no session of its own.
+      security: [{ portalSession: [] }]
+      responses:
+        "200":
+          description: The token
+          content: { application/json: { schema: { $ref: "./schemas/studio-token.json" } } }
+        "401": { $ref: "#/components/responses/Error" }
+
+components:
+  securitySchemes:
+    deskKey:
+      type: http
+      scheme: bearer
+      description: The Desk's key on Nelson (`NELSON_API_KEY`). Customer view only.
+    staffKey:
+      type: http
+      scheme: bearer
+      description: The Desk's staff-scope key on Nelson (`NELSON_STAFF_API_KEY`). Staff view, order writes and the order pack. Used only by Desk server code.
+    eventSignature:
+      type: apiKey
+      in: header
+      name: X-Nelson-Signature
+      description: "`t=<unix seconds>,v1=<hex HMAC-SHA256 of '<t>.<raw body>'>` with `DESK_WEBHOOK_SECRET`. Five-minute tolerance."
+    studioToken:
+      type: http
+      scheme: bearer
+      description: A token from `/api/v1/studio-token`, audience `studio`, signed with `PORTAL_TOKEN_SIGNING_KEY`.
+    portalSession:
+      type: apiKey
+      in: cookie
+      name: __session
+      description: A signed-in Portal client.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 128 }
+      description: Every POST carries one. The same key returns the first answer.
+    Signature:
+      name: X-Nelson-Signature
+      in: header
+      required: true
+      schema: { type: string, pattern: "^t=[0-9]+,v1=[0-9a-f]{64}$" }
+    OrderRef:
+      name: ref
+      in: path
+      required: true
+      schema: { type: string }
+      description: Nelson's order reference, from `from-quote` or `order.paid`.
+  responses:
+    Error:
+      description: Refused, with a stable `error` code
+      content: { application/json: { schema: { $ref: "./schemas/common.json#/$defs/error" } } }

@@ -1,0 +1,6 @@
+{
+  "token": "example.portal.token",
+  "audience": "studio",
+  "expires_at": "2026-11-21T08:29:05Z",
+  "client_id": "c_mothermoon"
+}

@@ -1,0 +1,20 @@
+{
+  "view": "customer",
+  "price_version": "pv_2026-11-19_a1",
+  "currency": "ZAR",
+  "valid_until": "2026-12-03T21:59:59Z",
+  "lines": [
+    {
+      "line_id": "ql_bag01",
+      "status": "needs_human",
+      "below_floor": false,
+      "quantity": 500,
+      "unit_cents": null,
+      "setup_cents": null,
+      "line_total_cents": null,
+      "ladder": []
+    }
+  ],
+  "delivery": null,
+  "totals": null
+}

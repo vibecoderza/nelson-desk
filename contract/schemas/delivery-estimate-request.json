@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/delivery-estimate-request.json",
+  "type": "object",
+  "properties": {
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_code": {
+            "$ref": "common.json#/$defs/product_code"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "product_code",
+          "quantity"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "delivery_address": {
+      "$ref": "common.json#/$defs/address"
+    },
+    "sign_date": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "lines",
+    "delivery_address",
+    "sign_date"
+  ],
+  "additionalProperties": false,
+  "title": "POST /api/v1/delivery-estimate request"
+}

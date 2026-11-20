@@ -1,0 +1,64 @@
+{
+  "view": "customer",
+  "price_version": "pv_2026-11-19_a1",
+  "currency": "ZAR",
+  "valid_until": "2026-12-03T21:59:59Z",
+  "lines": [
+    {
+      "line_id": "ql_cap01",
+      "status": "priced",
+      "below_floor": false,
+      "quantity": 100,
+      "unit_cents": 9500,
+      "setup_cents": 35000,
+      "line_total_cents": 950000,
+      "ladder": [
+        {
+          "min_quantity": 50,
+          "unit_cents": 10500
+        },
+        {
+          "min_quantity": 100,
+          "unit_cents": 9500
+        },
+        {
+          "min_quantity": 250,
+          "unit_cents": 8650
+        }
+      ]
+    },
+    {
+      "line_id": "ql_tum01",
+      "status": "priced",
+      "below_floor": false,
+      "quantity": 50,
+      "unit_cents": 14500,
+      "setup_cents": 25000,
+      "line_total_cents": 725000,
+      "ladder": [
+        {
+          "min_quantity": 25,
+          "unit_cents": 15500
+        },
+        {
+          "min_quantity": 50,
+          "unit_cents": 14500
+        },
+        {
+          "min_quantity": 100,
+          "unit_cents": 13500
+        }
+      ]
+    }
+  ],
+  "delivery": {
+    "service": "economy",
+    "price_cents": 18500
+  },
+  "totals": {
+    "lines_cents": 1675000,
+    "setup_cents": 60000,
+    "delivery_cents": 18500,
+    "total_cents": 1753500
+  }
+}

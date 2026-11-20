@@ -1,0 +1,11 @@
+{
+  "error": "price_changed",
+  "price_version": "pv_2026-11-20_b7",
+  "lines": [
+    {
+      "line_id": "ql_tum01",
+      "unit_cents": 15000,
+      "setup_cents": 25000
+    }
+  ]
+}

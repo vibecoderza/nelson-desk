@@ -1,0 +1,62 @@
+{
+  "schema": "nelson.event/1",
+  "id": "ev_01JD3ORDERPAID0001",
+  "type": "order.paid",
+  "occurred_at": "2026-11-21T08:14:05Z",
+  "subject": {
+    "type": "order",
+    "id": "ord_7Hq2mXc94Tz"
+  },
+  "data": {
+    "order_ref": "ord_7Hq2mXc94Tz",
+    "source": "quote",
+    "quote_ref": "Q-00007",
+    "version": 3,
+    "shop_order_name": "#2291",
+    "payment": {
+      "kind": "full",
+      "method": "card",
+      "amount_cents": 1753500
+    },
+    "total_cents": 1753500,
+    "contact": {
+      "name": "Holly Mokoena",
+      "email": "holly@mothermoon.example",
+      "phone": "+27215550142"
+    },
+    "ship_to": {
+      "line1": "14 Kloof Street",
+      "suburb": "Gardens",
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "postal_code": "8001",
+      "country": "ZA"
+    },
+    "lines": [
+      {
+        "line_id": "ql_cap01",
+        "product_code": "NEL-CAP-6P",
+        "colour": "forest",
+        "quantity": 100,
+        "design": {
+          "ref": "d_mm_cap",
+          "rev": 3
+        },
+        "unit_cents": 9500,
+        "setup_cents": 35000
+      },
+      {
+        "line_id": "ql_tum01",
+        "product_code": "NEL-TUM-500",
+        "colour": "copper",
+        "quantity": 50,
+        "design": {
+          "ref": "d_mm_tumbler",
+          "rev": 1
+        },
+        "unit_cents": 14500,
+        "setup_cents": 25000
+      }
+    ]
+  }
+}

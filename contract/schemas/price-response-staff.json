@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/price-response-staff.json",
+  "type": "object",
+  "properties": {
+    "view": {
+      "const": "staff"
+    },
+    "price_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "currency": {
+      "const": "ZAR"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "delivery": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "service": {
+              "enum": [
+                "economy",
+                "express"
+              ]
+            },
+            "price_cents": {
+              "$ref": "common.json#/$defs/cents"
+            }
+          },
+          "required": [
+            "service",
+            "price_cents"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "totals": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "lines_cents": {
+              "$ref": "common.json#/$defs/cents"
+            },
+            "setup_cents": {
+              "$ref": "common.json#/$defs/cents"
+            },
+            "delivery_cents": {
+              "$ref": "common.json#/$defs/cents"
+            },
+            "total_cents": {
+              "$ref": "common.json#/$defs/cents"
+            }
+          },
+          "required": [
+            "lines_cents",
+            "setup_cents",
+            "delivery_cents",
+            "total_cents"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "priced",
+              "quote_only",
+              "needs_human"
+            ]
+          },
+          "below_floor": {
+            "type": "boolean"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "unit_cents": {
+            "anyOf": [
+              {
+                "$ref": "common.json#/$defs/cents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "setup_cents": {
+            "anyOf": [
+              {
+                "$ref": "common.json#/$defs/cents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line_total_cents": {
+            "anyOf": [
+              {
+                "$ref": "common.json#/$defs/cents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ladder": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "min_quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "unit_cents": {
+                  "$ref": "common.json#/$defs/cents"
+                }
+              },
+              "required": [
+                "min_quantity",
+                "unit_cents"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "staff": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "supplier": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "supplier_code": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "stock": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "incoming_stock": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "due": {
+                          "type": "string",
+                          "format": "date"
+                        }
+                      },
+                      "required": [
+                        "quantity",
+                        "due"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "unit_cost_cents": {
+                    "$ref": "common.json#/$defs/cents"
+                  },
+                  "branding_cost_cents": {
+                    "$ref": "common.json#/$defs/cents"
+                  },
+                  "markup_applied_pct": {
+                    "type": "number"
+                  },
+                  "margin_cents": {
+                    "type": "integer"
+                  },
+                  "margin_pct": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "supplier",
+                  "supplier_code",
+                  "stock",
+                  "incoming_stock",
+                  "unit_cost_cents",
+                  "branding_cost_cents",
+                  "markup_applied_pct",
+                  "margin_cents",
+                  "margin_pct"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "line_id",
+          "status",
+          "below_floor",
+          "quantity",
+          "unit_cents",
+          "setup_cents",
+          "line_total_cents",
+          "ladder",
+          "staff"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "staff": {
+      "type": "object",
+      "properties": {
+        "cost_cents": {
+          "$ref": "common.json#/$defs/cents"
+        },
+        "margin_cents": {
+          "type": "integer"
+        },
+        "margin_pct": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "cost_cents",
+        "margin_cents",
+        "margin_pct"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "view",
+    "price_version",
+    "currency",
+    "valid_until",
+    "delivery",
+    "totals",
+    "lines",
+    "staff"
+  ],
+  "additionalProperties": false,
+  "title": "Price, staff view",
+  "description": "view=staff with a staff-scope key. Everything private sits under a `staff` key, so the customer view is this document with every `staff` key removed. Desk only."
+}

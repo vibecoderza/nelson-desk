@@ -1,0 +1,10 @@
+{
+  "status": "dispatched",
+  "marked_by": "alan",
+  "waybill": {
+    "courier": "Courier",
+    "service": "economy",
+    "number": "WB-55120934",
+    "cartons": 3
+  }
+}

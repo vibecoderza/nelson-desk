@@ -1,0 +1,21 @@
+{
+  "production_days": 7,
+  "transit_days": 2,
+  "target_date": "2026-12-04",
+  "carton_count": 3,
+  "lead_time_basis": "default",
+  "freight_options": [
+    {
+      "service": "economy",
+      "price_cents": 18500,
+      "transit_days": 2,
+      "target_date": "2026-12-04"
+    },
+    {
+      "service": "express",
+      "price_cents": 32500,
+      "transit_days": 1,
+      "target_date": "2026-12-03"
+    }
+  ]
+}

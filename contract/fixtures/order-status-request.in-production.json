@@ -1,0 +1,10 @@
+{
+  "status": "in_production",
+  "marked_by": "alan",
+  "supplier_refs": [
+    {
+      "pack_id": "pk_01",
+      "supplier_ref": "SO-88214"
+    }
+  ]
+}

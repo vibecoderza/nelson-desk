@@ -1,0 +1,733 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/event.json",
+  "title": "nelson.event/1",
+  "description": "One envelope, both ways. Signed with HMAC-SHA256 over `<timestamp>.<raw body>`, five-minute tolerance, delivered at least once, deduped by id.",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "nelson.event/1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^ev_[A-Za-z0-9]{10,}$"
+    },
+    "type": {
+      "enum": [
+        "order.paid",
+        "order_pack.status_changed",
+        "order.cancelled",
+        "cost.moved",
+        "design.saved",
+        "quote.basket_added",
+        "quote.sent",
+        "quote.accepted",
+        "quote.declined",
+        "quote.expired",
+        "proof.signed"
+      ]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "subject": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "order",
+            "order_pack",
+            "quote",
+            "proof",
+            "design",
+            "cost"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "type",
+    "occurred_at",
+    "subject",
+    "data"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "order.paid"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/order.paid"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "order_pack.status_changed"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/order_pack.status_changed"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "order.cancelled"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/order.cancelled"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "cost.moved"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/cost.moved"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "design.saved"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/design.saved"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "quote.basket_added"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/quote.basket_added"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "quote.sent"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/quote.sent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "quote.accepted"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/quote.accepted"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "quote.declined"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/quote.declined"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "quote.expired"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/quote.expired"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "proof.signed"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/proof.signed"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "order.paid": {
+      "type": "object",
+      "properties": {
+        "order_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "enum": [
+            "cart",
+            "quote"
+          ]
+        },
+        "quote_ref": {
+          "$ref": "common.json#/$defs/quote_ref"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "shop_order_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "payment": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "deposit",
+                "full"
+              ]
+            },
+            "method": {
+              "enum": [
+                "card",
+                "eft"
+              ]
+            },
+            "amount_cents": {
+              "$ref": "common.json#/$defs/cents"
+            }
+          },
+          "required": [
+            "kind",
+            "method",
+            "amount_cents"
+          ],
+          "additionalProperties": false
+        },
+        "total_cents": {
+          "$ref": "common.json#/$defs/cents"
+        },
+        "contact": {
+          "$ref": "common.json#/$defs/contact"
+        },
+        "ship_to": {
+          "$ref": "common.json#/$defs/address"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "line_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "product_code": {
+                "$ref": "common.json#/$defs/product_code"
+              },
+              "colour": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "design": {
+                "$ref": "common.json#/$defs/design_pin"
+              },
+              "unit_cents": {
+                "$ref": "common.json#/$defs/cents"
+              },
+              "setup_cents": {
+                "$ref": "common.json#/$defs/cents"
+              }
+            },
+            "required": [
+              "line_id",
+              "product_code",
+              "colour",
+              "quantity",
+              "design",
+              "unit_cents",
+              "setup_cents"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "order_ref",
+        "source",
+        "payment",
+        "total_cents",
+        "contact",
+        "lines"
+      ],
+      "additionalProperties": false
+    },
+    "order_pack.status_changed": {
+      "type": "object",
+      "properties": {
+        "order_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pack_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "$ref": "order-ack.json#/properties/pack_status"
+        },
+        "previous": {
+          "$ref": "order-ack.json#/properties/pack_status"
+        }
+      },
+      "required": [
+        "order_ref",
+        "pack_id",
+        "status",
+        "previous"
+      ],
+      "additionalProperties": false
+    },
+    "order.cancelled": {
+      "type": "object",
+      "properties": {
+        "order_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "order_ref",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "cost.moved": {
+      "type": "object",
+      "properties": {
+        "threshold_pct": {
+          "type": "number"
+        },
+        "moves": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "product_code": {
+                "$ref": "common.json#/$defs/product_code"
+              },
+              "previous_price_version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "price_version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "change_pct": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "product_code",
+              "previous_price_version",
+              "price_version",
+              "change_pct"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "threshold_pct",
+        "moves"
+      ],
+      "additionalProperties": false,
+      "description": "Nightly digest of moves over the threshold. Staff only: it lands on Today, never on the Portal."
+    },
+    "design.saved": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "product_code": {
+          "$ref": "common.json#/$defs/product_code"
+        }
+      },
+      "required": [
+        "ref",
+        "rev",
+        "owner",
+        "product_code"
+      ],
+      "additionalProperties": false
+    },
+    "quote.basket_added": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "product_code": {
+          "$ref": "common.json#/$defs/product_code"
+        },
+        "quantities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "colour": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "colour",
+              "quantity"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "ref",
+        "rev",
+        "owner",
+        "product_code",
+        "quantities"
+      ],
+      "additionalProperties": false
+    },
+    "quote.sent": {
+      "type": "object",
+      "properties": {
+        "quote_ref": {
+          "$ref": "common.json#/$defs/quote_ref"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "price_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "client_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "total_cents": {
+          "$ref": "common.json#/$defs/cents"
+        }
+      },
+      "required": [
+        "quote_ref",
+        "version",
+        "price_version",
+        "client_id",
+        "valid_until",
+        "total_cents"
+      ],
+      "additionalProperties": false
+    },
+    "quote.accepted": {
+      "type": "object",
+      "properties": {
+        "quote_ref": {
+          "$ref": "common.json#/$defs/quote_ref"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "order_ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "quote_ref",
+        "version",
+        "order_ref"
+      ],
+      "additionalProperties": false
+    },
+    "quote.declined": {
+      "type": "object",
+      "properties": {
+        "quote_ref": {
+          "$ref": "common.json#/$defs/quote_ref"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reason": {
+          "enum": [
+            "too_expensive",
+            "timing",
+            "went_elsewhere",
+            "budget_cut",
+            "just_exploring",
+            "something_else"
+          ]
+        }
+      },
+      "required": [
+        "quote_ref",
+        "version",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "quote.expired": {
+      "type": "object",
+      "properties": {
+        "quote_ref": {
+          "$ref": "common.json#/$defs/quote_ref"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cause": {
+          "enum": [
+            "no_reply",
+            "validity"
+          ]
+        }
+      },
+      "required": [
+        "quote_ref",
+        "version",
+        "cause"
+      ],
+      "additionalProperties": false
+    },
+    "proof.signed": {
+      "type": "object",
+      "properties": {
+        "order_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proof_ref": {
+          "type": "string",
+          "pattern": "^PP-[0-9]+$"
+        },
+        "round": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sheet_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "record_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "signed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "signed_by": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "order_ref",
+        "proof_ref",
+        "round",
+        "sheet_sha256",
+        "record_sha256",
+        "signed_at",
+        "signed_by"
+      ],
+      "additionalProperties": false,
+      "description": "For the pack's proof block."
+    }
+  },
+  "x-direction": {
+    "nelson_to_desk": [
+      "order.paid",
+      "order_pack.status_changed",
+      "order.cancelled",
+      "cost.moved",
+      "design.saved",
+      "quote.basket_added"
+    ],
+    "desk_to_nelson": [
+      "quote.sent",
+      "quote.accepted",
+      "quote.declined",
+      "quote.expired",
+      "proof.signed"
+    ]
+  }
+}

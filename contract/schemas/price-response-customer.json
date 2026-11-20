@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/price-response-customer.json",
+  "type": "object",
+  "properties": {
+    "view": {
+      "const": "customer"
+    },
+    "price_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "currency": {
+      "const": "ZAR"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "delivery": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "service": {
+              "enum": [
+                "economy",
+                "express"
+              ]
+            },
+            "price_cents": {
+              "$ref": "common.json#/$defs/cents"
+            }
+          },
+          "required": [
+            "service",
+            "price_cents"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "totals": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "lines_cents": {
+              "$ref": "common.json#/$defs/cents"
+            },
+            "setup_cents": {
+              "$ref": "common.json#/$defs/cents"
+            },
+            "delivery_cents": {
+              "$ref": "common.json#/$defs/cents"
+            },
+            "total_cents": {
+              "$ref": "common.json#/$defs/cents"
+            }
+          },
+          "required": [
+            "lines_cents",
+            "setup_cents",
+            "delivery_cents",
+            "total_cents"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "priced",
+              "quote_only",
+              "needs_human"
+            ]
+          },
+          "below_floor": {
+            "type": "boolean"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "unit_cents": {
+            "anyOf": [
+              {
+                "$ref": "common.json#/$defs/cents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "setup_cents": {
+            "anyOf": [
+              {
+                "$ref": "common.json#/$defs/cents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line_total_cents": {
+            "anyOf": [
+              {
+                "$ref": "common.json#/$defs/cents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ladder": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "min_quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "unit_cents": {
+                  "$ref": "common.json#/$defs/cents"
+                }
+              },
+              "required": [
+                "min_quantity",
+                "unit_cents"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "line_id",
+          "status",
+          "below_floor",
+          "quantity",
+          "unit_cents",
+          "setup_cents",
+          "line_total_cents",
+          "ladder"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "view",
+    "price_version",
+    "currency",
+    "valid_until",
+    "delivery",
+    "totals",
+    "lines"
+  ],
+  "additionalProperties": false,
+  "title": "Price, customer view",
+  "description": "The only price shape the Portal, the PDF and any client message may carry. additionalProperties is false on purpose: a staff field makes the document invalid."
+}
