@@ -20,12 +20,13 @@ export function parseNelsonEvent(rawBody: string): NelsonEvent<FromNelson> | nul
   return okay ? (e as NelsonEvent<FromNelson>) : null;
 }
 
-export async function receiveNelsonEvent(db: Db, input: { rawBody: string; signature: string | null; secret: string; now: Date }): Promise<Received> {
+// `db` may be a getter, so an unsigned request is refused before a database connection is ever opened.
+export async function receiveNelsonEvent(db: Db | (() => Db), input: { rawBody: string; signature: string | null; secret: string; now: Date }): Promise<Received> {
   const verified = verify(input.rawBody, input.signature, input.secret, input.now);
   if (!verified.ok) return { status: 401, error: verified.reason };
   const event = parseNelsonEvent(input.rawBody);
   if (!event) return { status: 400, error: "not a nelson.event/1 the Desk accepts" };
-  const inserted = await db.$executeRaw`
+  const inserted = await (typeof db === "function" ? db() : db).$executeRaw`
     INSERT INTO webhook_inbox (id, source, external_id, type, payload, received_at, created_at, updated_at)
     VALUES (${"wi_" + event.id.slice(3)}, 'nelson', ${event.id}, ${event.type}, ${JSON.stringify(event)}::jsonb, ${input.now}, ${input.now}, ${input.now})
     ON CONFLICT (source, external_id) DO NOTHING`;
