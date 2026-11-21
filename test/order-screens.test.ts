@@ -189,3 +189,24 @@ describe("the Desk's inbox", () => {
     keep("desk-inbox", html(createElement(InboxScreen, { view, said: null, start: noop })));
   });
 });
+
+describe("the Desk's back office", () => {
+  test("business numbers are sums and counts of what is on file", async () => {
+    const { business } = await import("@/desk/business.ts");
+    const { BusinessScreen, SuppliersScreen } = await import("@/desk/back-office-screens.tsx");
+    const { suppliers } = await import("@/desk/suppliers.ts");
+    const view = await business(quotes, file, NOW);
+    const all = mockOrderList(NOW);
+    expect(view.month).toBe("November");
+    expect(view.sales_cents).toBe(all.filter((o) => o.ref !== "N-1019").reduce((s, o) => s + o.total_cents, 0));
+    expect(view.by_month.map((m) => m.month)).toEqual(["September", "November"]);
+    expect(view.by_month.reduce((s, m) => s + m.sales_cents, 0)).toBe(all.reduce((s, o) => s + o.total_cents, 0));
+    expect(view).toMatchObject({ orders: 7, won: 2, decided: 4 });
+    keep("desk-business", html(createElement(BusinessScreen, { view })));
+    const sup = await suppliers(file, NOW);
+    expect(sup.rows[0]).toMatchObject({ name: "Amrod", how: "Prices by feed" });
+    expect(sup.rows.flatMap((r) => r.with_them).length).toBe(7);
+    expect(sup.requests.map((r) => r.chip.words)).toEqual(["Answer due in 4 h", "Answered in 19 h"]);
+    keep("desk-suppliers", html(createElement(SuppliersScreen, { view: sup })));
+  });
+});

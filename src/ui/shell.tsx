@@ -23,7 +23,7 @@ function Rail({ items }: { items: NavItem[] }) {
   );
 }
 
-export type DeskPlace = "today" | "inbox" | "quotes" | "orders" | "clients";
+export type DeskPlace = "today" | "inbox" | "quotes" | "orders" | "clients" | "suppliers" | "business";
 export type PortalPlace = "home" | "quotes" | "orders";
 
 export function DeskShell({ current, openQuotes, openOrders, waiting, children }: { current: DeskPlace; openQuotes: number; openOrders: number; waiting: number; children: ReactNode }) {
@@ -33,6 +33,8 @@ export function DeskShell({ current, openQuotes, openOrders, waiting, children }
     { label: "Quotes", href: "/quotes", count: openQuotes, current: current === "quotes" },
     { label: "Orders", href: "/orders", count: openOrders, current: current === "orders" },
     { label: "Clients", href: "/clients", current: current === "clients" },
+    { label: "Suppliers", href: "/suppliers", current: current === "suppliers" },
+    { label: "Business", href: "/business", current: current === "business" },
   ];
   return (
     <div className="app">

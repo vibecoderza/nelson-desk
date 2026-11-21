@@ -13,3 +13,4 @@ const SAMPLE: Record<string, Supply> = {
   "N-1019": { supplier: "Amrod", supplier_order_ref: "SO-87410", placed: true },
 };
 export const supplyFor = (ref: string): Supply | null => SAMPLE[ref] ?? null;
+export const allSupply = (): Record<string, Supply> => SAMPLE;
