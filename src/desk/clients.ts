@@ -34,7 +34,8 @@ export async function clients(book: QuoteBook, file: OrderFile): Promise<Clients
 const titled = <T extends { client: string; what: string }>(row: T): T => ({ ...row, client: row.what, what: "" });
 
 export type ClientPage = {
-  id: string; name: string; contact: string; email: string; address: string;
+  id: string; name: string; contact: string; email: string; address: string; phone_tail: string;
+  sendable: { ref: string; title: string }[]; // quotes that can be dropped into the conversation
   paid_cents: number; orders_count: number; average_order_cents: number | null; won: number; decided: number; open_quote_cents: number;
   orders: BoardRow[]; quotes: PipelineRow[]; messages: (BookMessage & { on: string })[];
 };
@@ -48,12 +49,13 @@ export async function clientPage(book: QuoteBook, file: OrderFile, id: string, n
   const decided = quotes.filter((q) => !openQuote(q));
   const byNewest = <T,>(xs: T[], at: (x: T) => number) => [...xs].sort((a, b) => at(b) - at(a));
   return {
-    id: client.id, name: client.name, contact: client.contact_name, email: client.contact_email, address: client.address_words,
+    id: client.id, name: client.name, contact: client.contact_name, email: client.contact_email, address: client.address_words, phone_tail: client.phone_tail,
+    sendable: quotes.filter((q) => (q.state === "working" || q.state === "final") && q.versions.length > 0).map((q) => ({ ref: q.ref, title: q.title })),
     paid_cents: paid(orders), orders_count: counted.length, average_order_cents: counted.length ? Math.round(paid(orders) / counted.length) : null,
     won: decided.filter((q) => q.state === "accepted").length, decided: decided.length,
     open_quote_cents: quotes.filter((q) => q.state === "working" || q.state === "final").reduce((sum, q) => sum + (latestVersion(q)?.totals.total_cents ?? 0), 0),
     orders: byNewest(orders, (o) => o.paid_at.getTime()).map((o) => boardRow(o, now)).map(titled),
     quotes: byNewest(quotes, (q) => (q.last_sent_at ?? q.asked_at).getTime()).map((q) => pipelineRow(q, now)).map(titled),
-    messages: byNewest([...quotes.flatMap((q) => q.messages.map((m) => ({ ...m, on: q.ref }))), ...orders.flatMap((o) => o.messages.map((m) => ({ ...m, on: o.ref })))], (m) => m.at.getTime()),
+    messages: byNewest([...quotes.flatMap((q) => q.messages.map((m) => ({ ...m, on: q.ref }))), ...orders.flatMap((o) => o.messages.map((m) => ({ ...m, on: o.ref })))], (m) => -m.at.getTime()),
   };
 }

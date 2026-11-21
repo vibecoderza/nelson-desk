@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { reworkQuote, sendFollowUp } from "@/desk/actions.ts";
+import { messageClient, sendQuoteToClient } from "@/desk/client-actions.ts";
 import { clientPage } from "@/desk/clients.ts";
 import { ClientScreen } from "@/desk/client-screens.tsx";
 import { DeskFrame } from "@/desk/frame.tsx";
@@ -13,7 +14,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   if (!view) notFound();
   return (
     <DeskFrame current="clients">
-      <ClientScreen view={view} said={readNotice(await searchParams)} actions={{ followUp: sendFollowUp, rework: reworkQuote, place: placeSupplierOrder }} />
+      <ClientScreen view={view} said={readNotice(await searchParams)} actions={{ followUp: sendFollowUp, rework: reworkQuote, place: placeSupplierOrder, message: messageClient, sendQuote: sendQuoteToClient }} />
     </DeskFrame>
   );
 }

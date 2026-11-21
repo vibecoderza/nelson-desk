@@ -168,7 +168,9 @@ describe("the Desk's clients", () => {
     expect(view.quotes.length).toBe(6);
     expect(view).toMatchObject({ orders_count: 3, average_order_cents: 766_667, won: 2, decided: 3 });
     expect(view.messages.length).toBe(4);
-    keep("desk-client", html(createElement(ClientScreen, { view, said: null, actions: { followUp: noop, rework: noop, place: noop } })));
+    keep("desk-client", html(createElement(ClientScreen, { view, said: null, actions: { followUp: noop, rework: noop, place: noop, message: noop, sendQuote: noop } })));
+    expect(view.sendable.map((q) => q.ref).sort()).toEqual(["Q-00007", "Q-00012", "Q-00014"]);
+    expect(view.messages[0]!.at.getTime()).toBeLessThan(view.messages.at(-1)!.at.getTime());
     for (const id of ["c_nobody", "../etc", ""]) expect(await clientPage(quotes, file, id, NOW)).toBeNull();
   });
 });
