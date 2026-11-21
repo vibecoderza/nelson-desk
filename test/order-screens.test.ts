@@ -174,3 +174,18 @@ describe("the Desk's clients", () => {
     for (const id of ["c_nobody", "../etc", ""]) expect(await clientPage(quotes, file, id, NOW)).toBeNull();
   });
 });
+
+describe("the Desk's inbox", () => {
+  test("what waits on us comes first, oldest at the top, with what was read from it", async () => {
+    const { inbox, inbound } = await import("@/desk/inbox.ts");
+    const { InboxScreen } = await import("@/desk/inbox-screens.tsx");
+    const view = await inbox(quotes, file, NOW);
+    expect(view.waiting.map((r) => r.id)).toEqual(["Q-00007", "in_3", "in_1", "in_2"]);
+    expect(view.waiting.find((r) => r.id === "in_1")).toMatchObject({ client_id: null, can_start: true, artwork: true, read: "Caps × 80 · Paarl · by 12 Dec" });
+    expect(view.waiting.find((r) => r.id === "in_3")).toMatchObject({ can_start: false, open: { label: "Reply" } });
+    expect(view.answered.map((r) => r.id)).toEqual(["N-1035"]);
+    // What the agent read is words, never a price.
+    for (const m of inbound()) expect(m.read ?? "").not.toMatch(/R\s?\d/);
+    keep("desk-inbox", html(createElement(InboxScreen, { view, said: null, start: noop })));
+  });
+});

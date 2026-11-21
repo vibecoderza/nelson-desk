@@ -23,12 +23,13 @@ function Rail({ items }: { items: NavItem[] }) {
   );
 }
 
-export type DeskPlace = "today" | "quotes" | "orders" | "clients";
+export type DeskPlace = "today" | "inbox" | "quotes" | "orders" | "clients";
 export type PortalPlace = "home" | "quotes" | "orders";
 
-export function DeskShell({ current, openQuotes, openOrders, children }: { current: DeskPlace; openQuotes: number; openOrders: number; children: ReactNode }) {
+export function DeskShell({ current, openQuotes, openOrders, waiting, children }: { current: DeskPlace; openQuotes: number; openOrders: number; waiting: number; children: ReactNode }) {
   const items: NavItem[] = [
     { label: "Today", href: "/", current: current === "today" },
+    { label: "Inbox", href: "/inbox", count: waiting, current: current === "inbox" },
     { label: "Quotes", href: "/quotes", count: openQuotes, current: current === "quotes" },
     { label: "Orders", href: "/orders", count: openOrders, current: current === "orders" },
     { label: "Clients", href: "/clients", current: current === "clients" },
