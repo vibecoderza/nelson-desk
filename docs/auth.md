@@ -47,6 +47,12 @@ Do not set Clerk's default names (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SE
 - Portal rule: signed in and not a delegated session. The client role comes from the organisation role. An unknown role is no role.
 - Machine routes carry their own credential and belong to one host: the Nelson webhook (signature), the outbox cron (bearer), health.
 
+## Looking at a pull request before it merges
+
+Both Clerk applications are tied to `dearnelson.co.za`, so a Vercel preview cannot sign anyone in with them. While the app runs on sample data, a preview serves the two surfaces on its own two addresses with Vercel's login as the door: the branch address is the Desk, the deployment's own address is the Portal (`src/surface/preview.ts`).
+
+It answers only when Vercel marks the deployment a preview, no database is configured and Nelson has no address. The live hosts never qualify. Setting `DATABASE_URL`, `DATABASE_URL_PORTAL` or `NELSON_BASE_URL` on Preview closes it. Keep Vercel Authentication on for previews: it is the only lock on this door.
+
 ## Not proven yet
 
 - Nothing here has run against live Clerk. No keys existed in the build session, by design. First sign-in on a preview is the test.

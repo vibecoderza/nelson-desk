@@ -1,10 +1,13 @@
 // Desk only. The staff view of the price, and the order writes that need the staff-scope key.
 // Portal code may not import this file (test/exposure-portal.test.ts walks the imports).
-import { nelsonCall, type CustomerPrice, type NelsonConfig, type PricedLine, type PriceRequest } from "../nelson/client.ts";
+import { nelsonCall, type CustomerPrice, type Decoration, type NelsonConfig, type PricedLine, type PriceRequest } from "../nelson/client.ts";
 
+// What Nelson costed for one decoration. Proposed in card 26; optional until Nelson's answer carries it.
+export type CostedBranding = Decoration & { stitches?: number; unit_cost_cents: number; setup_cost_cents: number };
 export type StaffLine = {
   supplier: string; supplier_code: string; stock: number; incoming_stock: { quantity: number; due: string }[];
   unit_cost_cents: number; branding_cost_cents: number; markup_applied_pct: number; margin_cents: number; margin_pct: number;
+  setup_cost_cents?: number; cost_as_of?: string; supplier_url?: string; branding_costs?: CostedBranding[];
 };
 export type StaffPrice = Omit<CustomerPrice, "view" | "lines"> & {
   view: "staff";

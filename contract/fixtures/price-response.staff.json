@@ -40,7 +40,22 @@
         "branding_cost_cents": 2311,
         "markup_applied_pct": 52.95,
         "margin_cents": 328900,
-        "margin_pct": 34.6
+        "margin_pct": 34.6,
+        "setup_cost_cents": 15000,
+        "cost_as_of": "2026-11-19",
+        "supplier_url": "https://supplier.example/products/BH-0042",
+        "branding_costs": [
+          {
+            "position": "front",
+            "method": "embroidery",
+            "colours": 2,
+            "width_mm": 60,
+            "height_mm": 25,
+            "stitches": 4200,
+            "unit_cost_cents": 2311,
+            "setup_cost_cents": 15000
+          }
+        ]
       }
     },
     {
@@ -79,7 +94,20 @@
         "branding_cost_cents": 1280,
         "markup_applied_pct": 52.95,
         "margin_cents": 251000,
-        "margin_pct": 34.6
+        "margin_pct": 34.6,
+        "setup_cost_cents": 9500,
+        "cost_as_of": "2026-11-19",
+        "supplier_url": "https://supplier.example/products/DW-1187",
+        "branding_costs": [
+          {
+            "position": "wrap",
+            "method": "laser",
+            "width_mm": 40,
+            "height_mm": 15,
+            "unit_cost_cents": 1280,
+            "setup_cost_cents": 9500
+          }
+        ]
       }
     }
   ],

@@ -1,10 +1,20 @@
 // Today. The proxy has already checked the staff list and the second factor before this renders.
-// Phase 1 builds the screen; phase 0 proves the door.
-export default function TodayPage() {
+import { sendFollowUp, reworkQuote } from "@/desk/actions.ts";
+import { DeskFrame } from "@/desk/frame.tsx";
+import { placeSupplierOrder } from "@/desk/order-actions.ts";
+import { board } from "@/desk/orders.ts";
+import { TodayScreen } from "@/desk/screens.tsx";
+import { pipeline } from "@/desk/quotes.ts";
+import { orderFile } from "@/orders/source.ts";
+import { quoteBook } from "@/quotes/source.ts";
+import { readNotice } from "@/ui/bits.tsx";
+
+export default async function TodayPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const now = new Date();
+  const [view, orders] = await Promise.all([pipeline(quoteBook(), "open", now), board(orderFile(), "open", now)]);
   return (
-    <main>
-      <h1>Today</h1>
-      <p>Nothing here yet.</p>
-    </main>
+    <DeskFrame current="today">
+      <TodayScreen view={view} orders={orders} said={readNotice(await searchParams)} actions={{ followUp: sendFollowUp, rework: reworkQuote, place: placeSupplierOrder }} />
+    </DeskFrame>
   );
 }

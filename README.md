@@ -5,6 +5,7 @@ Nelson's back office (the Desk) and its client portal (the Portal). Private.
 - `CLAUDE.md`: the rules every build follows.
 - `docs/brief.md`: the project brief (19 Nov 2026).
 - `docs/cards/phase-0.md`: the phase 0 cards and what is still open.
+- `docs/cards/phase-1.md`: the quote screens, what runs on mock data and what comes next.
 - `docs/auth.md`: sign-in, two Clerk applications, what to set where.
 - `docs/blueprint-section-h.md`: draft of the Architecture blueprint's section h.
 - `contract/openapi.yaml`: the contract with Nelson. Schemas and fixtures sit beside it.
@@ -20,6 +21,8 @@ npm run build
 ```
 
 Tests need no database and no keys: Postgres runs in-process and Nelson is the mock.
+
+Until a database is set, both surfaces read a stand-in quote book and a stand-in Nelson (`src/mock`). Setting `DATABASE_URL` or `NELSON_BASE_URL` switches the stand-ins off.
 
 Locally the two hosts are `desk.localhost:3000` and `my.localhost:3000`. Any other host serves nothing.
 

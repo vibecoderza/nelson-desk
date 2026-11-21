@@ -3,6 +3,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import { decide, responseHeaders, surfaceForHost, type Decision, type Surface } from "./src/surface/access.ts";
+import { previewDecide, previewSurface } from "./src/surface/preview.ts";
 import { clerkKeys, hostsFromEnv, secondFactorRequiredFromEnv, sessionFrom, staffEmailsFromEnv } from "./src/surface/clerk.ts";
 
 const withHeaders = (res: NextResponse, surface: Surface, decision: Decision) => {
@@ -41,8 +42,21 @@ const guarded = clerkMiddleware(
   },
 );
 
+// A preview deployment on sample data, behind Vercel's login. See src/surface/preview.ts for when this answers.
+function preview(req: NextRequest, surface: Surface) {
+  const decision = previewDecide(surface, req.nextUrl.pathname);
+  if (decision.action === "machine") return withHeaders(NextResponse.next(), surface, decision);
+  if (decision.action !== "page") return withHeaders(plain(404, "Not found"), surface, decision);
+  const url = req.nextUrl.clone();
+  url.pathname = decision.rewriteTo;
+  return withHeaders(NextResponse.rewrite(url), surface, decision);
+}
+
 export default function proxy(req: NextRequest, event: NextFetchEvent) {
   const surface = surfaceOf(req);
+  // Only a host the real front door does not know is ever offered to the preview look.
+  const looking = surface ? null : previewSurface(req.headers.get("x-forwarded-host") ?? req.headers.get("host"));
+  if (looking) return preview(req, looking);
   if (!surface) return plain(404, "Not found");
   // Machine routes carry their own credential and never touch a session.
   const first = decide(surface, req.nextUrl.pathname, null, []);
