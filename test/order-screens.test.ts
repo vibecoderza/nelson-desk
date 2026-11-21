@@ -210,3 +210,22 @@ describe("the Desk's back office", () => {
     keep("desk-suppliers", html(createElement(SuppliersScreen, { view: sup })));
   });
 });
+
+describe("the Portal's brand kit and artwork", () => {
+  test("guesses are counted, a redrawn file stops asking, and Nelson's redraws sit apart", async () => {
+    const { mockBrand } = await import("@/mock/brand.ts");
+    const { portalArtwork, portalBrandKit } = await import("@/portal/brand.ts");
+    const { ArtworkScreen, BrandKitScreen } = await import("@/portal/brand-screens.tsx");
+    const kit = await portalBrandKit(mockBrand(), MOCK_PORTAL_CLIENT_ID, "Mother Moon Herbals", true);
+    expect(kit).toMatchObject({ guesses: 3, read: "Read from your brand guide (PDF) on 4 Nov" });
+    expect(kit.colours[0]).toMatchObject({ title: "Moss", sub: "#4B5D43 · nearest thread: Deep moss green" });
+    const page = html(createElement(BrandKitScreen, { view: kit, said: null, confirm: noop }));
+    expect(page.match(/Guess · confirm/g)!.length).toBe(3);
+    expect(html(createElement(BrandKitScreen, { view: { ...kit, may_confirm: false }, said: null, confirm: noop }))).not.toMatch(/>Confirm</);
+    keep("portal-brand", page);
+    const art = await portalArtwork(mockBrand(), MOCK_PORTAL_CLIENT_ID, "Mother Moon Herbals");
+    expect(art.yours.map((r) => [r.id, r.chip.words, r.can_redraw])).toEqual([["af_moon_2", "Needs a redraw", true], ["af_moon_1", "Ready to print", false], ["af_moon_3", "Redrawn", false]]);
+    expect(art.from_nelson.map((r) => r.id)).toEqual(["af_moon_4"]);
+    keep("portal-artwork", html(createElement(ArtworkScreen, { view: art, said: null, redraw: noop })));
+  });
+});

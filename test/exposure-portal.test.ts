@@ -34,6 +34,9 @@ import { DeskOrderScreen } from "@/desk/order-screens.tsx";
 import { mockOrderList, mockOrders } from "@/mock/orders.ts";
 import { portalHome, portalOrder, portalOrders, portalProof } from "@/portal/orders.ts";
 import { HomeScreen, OrderScreen, OrdersScreen, ProofScreen } from "@/portal/order-screens.tsx";
+import { mockArtwork, mockBrand, mockKits } from "@/mock/brand.ts";
+import { portalArtwork, portalBrandKit } from "@/portal/brand.ts";
+import { ArtworkScreen, BrandKitScreen } from "@/portal/brand-screens.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const STAFF_TABLES = ["quote_line_staff", "quote_version_staff", "order_line_staff", "supplier", "costing_request", "costing_answer", "outbox", "webhook_inbox", "agent", "agent_log", "audit_log", "staff_user", "setting", "client_note", "brief", "enquiry", "follow_up", "template", "client_source"];
@@ -441,5 +444,54 @@ describe("the order and proof screens a client can open", () => {
     const naming = [...walk("src"), ...walk("app")].filter((f) => /order-supply|supplyFor/.test(readFileSync(path.join(ROOT, f), "utf8")));
     expect(naming.length).toBeGreaterThan(0);
     expect(naming.filter((f) => !f.startsWith(path.join("src", "desk")))).toEqual([]);
+  });
+});
+
+describe("the brand kit and artwork a client can open", () => {
+  const file = mockBrand();
+  const noop = async () => {};
+  const STAFF_WORDS = /\b(margin|mark-?up|supplier|stock|stocks|cost|costs|costing|print house)\b/i;
+
+  test("the stand-in brand file holds the customer view only", () => {
+    expect(leaksIn(mockKits())).toEqual([]);
+    expect(leaksIn(mockArtwork())).toEqual([]);
+  });
+
+  test("the brand kit and the artwork are clean for every client, as data and as HTML", async () => {
+    for (const client of ["c_mothermoon", "c_lagom", "c_nobody"]) {
+      const kit = await portalBrandKit(file, client, "A client", true);
+      const art = await portalArtwork(file, client, "A client");
+      const pages = [renderToStaticMarkup(createElement(BrandKitScreen, { view: kit, said: null, confirm: noop })), renderToStaticMarkup(createElement(ArtworkScreen, { view: art, said: null, redraw: noop }))];
+      for (const [i, view] of [kit, art].entries()) {
+        expect(leaksIn(view), client).toEqual([]);
+        expect(leaksInText(pages[i]!), client).toEqual([]);
+        expect(pages[i]!.match(STAFF_WORDS)?.[0] ?? null, client).toBeNull();
+      }
+    }
+  });
+
+  test("a client sees their own kit and files and nothing else", async () => {
+    const moon = await portalArtwork(file, "c_mothermoon", "Mother Moon Herbals");
+    expect([...moon.yours, ...moon.from_nelson].map((r) => r.id).sort()).toEqual(["af_moon_1", "af_moon_2", "af_moon_3", "af_moon_4"]);
+    const lagom = await portalArtwork(file, "c_lagom", "Lagom Studio");
+    expect(lagom.yours.map((r) => r.id)).toEqual(["af_lagom_1"]);
+    const nobody = await portalBrandKit(file, "c_nobody", "Nobody", true);
+    expect([nobody.read, nobody.colours.length, nobody.fonts.length, nobody.rules.length]).toEqual([null, 0, 0, 0]);
+    expect((await portalArtwork(file, "c_nobody", "Nobody")).yours).toEqual([]);
+    // A file that leaks across in the store is still dropped by the view.
+    const crossed = { ...file, artworkFor: async () => mockArtwork(), kitFor: async () => mockKits()[1]! };
+    expect((await portalArtwork(crossed, "c_mothermoon", "M")).yours.map((r) => r.id)).not.toContain("af_lagom_1");
+    expect((await portalBrandKit(crossed, "c_mothermoon", "M", true)).read).toBeNull();
+  });
+
+  test("the brand actions find the thing among the client's own before anything else", () => {
+    const actions = readFileSync(path.join(ROOT, "src/portal/brand-actions.ts"), "utf8");
+    const exported = [...actions.matchAll(/export async function (\w+)\(form: FormData\): Promise<void> \{\n\s+const \w+ = await own(?:Artwork|KitItem)\(form\);/g)].map((m) => m[1]);
+    expect(exported.sort()).toEqual(["askForRedraw", "confirmKitItem"]);
+    expect([...actions.matchAll(/export (?:async function|const) (\w+)/g)].map((m) => m[1]).sort()).toEqual(exported);
+    expect(actions.match(/portalClientId\(\)/g)!.length).toBeGreaterThanOrEqual(4);
+    const views = readFileSync(path.join(ROOT, "src/portal/brand.ts"), "utf8");
+    expect(views.match(/client\.id [!=]== clientId/g)!.length).toBe(2);
+    expect(views.match(/assertPortalSafe\(/g)!.length).toBe(3);
   });
 });
