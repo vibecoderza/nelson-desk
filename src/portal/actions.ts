@@ -8,6 +8,7 @@ import { clientCan, DECLINE_REASONS, quoteTransition, type DeclineReason, type Q
 import { latestVersion, type BookQuote } from "../quotes/book.ts";
 import { NOTHING_SAVED, quoteBook, saidUrl, type Said } from "../quotes/source.ts";
 import { rand } from "../ui/format.ts";
+import { allowedPick, parsePick } from "./quotes.ts";
 import { portalClientId } from "./who.ts";
 
 const REF = /^Q-\d{5}$/;
@@ -52,6 +53,18 @@ export async function takeSuggestion(form: FormData): Promise<void> {
   const next = amendment ? amendmentTransition(amendment.state, { type: "take_suggestion" }, "client") : null;
   if (!amendment || !next?.ok) return back(q, "", refused("there is no suggestion waiting on that line"));
   return back(q, "", { ok: true, text: `The line would take Nelson's ${amendment.suggestion} and read Agreed, and the quote would move to v${q.version + 1}. ${NOTHING_SAVED}` });
+}
+
+// The client asks for the quantities they tried out. It is a change: Nelson re-prices and sends a new version.
+export async function askForPick(form: FormData): Promise<void> {
+  const q = await ownQuote(form);
+  if (!q) return back(null, "", refused("that quote is not here"));
+  if (!clientCan(q.state).change) return back(q, "", refused("this quote can no longer be changed"));
+  const pick = allowedPick(q.lines, parsePick(text(form, "pick")));
+  const changed = Object.keys(pick).length;
+  if (!changed) return back(q, "", refused("pick a quantity first"));
+  const dropped = Object.values(pick).filter((n) => n === 0).length;
+  return back(q, "", { ok: true, text: `Nelson would get your change to ${changed === 1 ? "1 piece" : `${changed} pieces`}${dropped ? `, ${dropped} left out` : ""}, and answer with v${q.version + 1}. ${NOTHING_SAVED}` });
 }
 
 export async function reopenQuote(form: FormData): Promise<void> {

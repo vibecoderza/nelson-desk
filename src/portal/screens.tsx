@@ -6,7 +6,7 @@ import { Chip, MockBar, Notice, Tabs, Tile } from "../ui/bits.tsx";
 import { day, dayTime, rand } from "../ui/format.ts";
 import type { QuoteDocument } from "../quotes/document.ts";
 import { QuoteSheet } from "../quotes/sheet.tsx";
-import type { PortalDecide, PortalQuote, PortalQuotes, PortalRow, PortalTab } from "./quotes.ts";
+import { pickText, type PortalDecide, type PortalQuote, type PortalQuotes, type PortalRow, type PortalTab } from "./quotes.ts";
 
 type Action = (form: FormData) => Promise<void>;
 type Said = { ok: boolean; text: string } | null;
@@ -49,8 +49,15 @@ export function QuotesScreen({ view, said, reopen }: { view: PortalQuotes; said:
 }
 
 // The total and the next step lead. The lines are plain rows. Everything else opens when asked for.
-export function QuoteScreen({ view, said, takeSuggestion, ask }: { view: PortalQuote; said: Said; takeSuggestion: Action; ask: Action }) {
+export function QuoteScreen({ view, said, takeSuggestion, ask, askForPick }: { view: PortalQuote; said: Said; takeSuggestion: Action; ask: Action; askForPick: Action }) {
   const base = `/quotes/${view.ref}`;
+  // Trying a quantity is a link: the pick rides in the address and nothing is saved until the client asks for it.
+  const withPick = (id: string, n: number | null) => {
+    const next = { ...view.pick };
+    if (n === null) delete next[id]; else next[id] = n;
+    const text = pickText(next);
+    return `${text ? `${base}?pick=${text}` : base}#${id}`; // lands back on the same piece
+  };
   const waiting = view.not_agreed === 1 ? "1 item is waiting on an answer." : `${view.not_agreed} items are waiting on an answer.`;
   return (
     <div className="page is-calm">
@@ -64,12 +71,18 @@ export function QuoteScreen({ view, said, takeSuggestion, ask }: { view: PortalQ
 
       <section className="panel is-lead hero">
         <div>
-          <span className="hero-label">Total</span>
+          <span className="hero-label">{view.picked ? "Your pick" : "Total"}</span>
           <b className="hero-total">{rand(view.totals.total_cents)}</b>
           <span className="small muted">Delivered. No VAT charged.</span>
         </div>
         <div className="hero-do">
-          {view.order_ref ? <span className="small">Paid. This is now order {view.order_ref}.</span>
+          {view.picked ? (
+            <form action={askForPick} className="hero-do">
+              <input type="hidden" name="ref" value={view.ref} /><input type="hidden" name="pick" value={pickText(view.pick)} />
+              <button className="btn is-big is-next">Ask Nelson for this</button>
+              <a className="small" href={base}>Back to the quote as sent</a>
+            </form>
+          ) : view.order_ref ? <span className="small">Paid. This is now order {view.order_ref}.</span>
             : view.can.acceptAndPay ? <a className="btn is-big is-next" href={`${base}/decide`}>Accept and pay</a>
             : view.can.decline ? <><span className="btn is-big is-off">Accept and pay</span><span className="small tone-warn">{waiting}</span></>
             : <span className="small muted">This quote is {view.state_word.toLowerCase()}.</span>}
@@ -78,13 +91,19 @@ export function QuoteScreen({ view, said, takeSuggestion, ask }: { view: PortalQ
 
       <section className="list">
         {view.lines.map((line) => (
-          <article key={line.id} className="item is-line">
+          <article key={line.id} id={line.id} className={`item is-line${line.left_out ? " is-out" : ""}`}>
             <Tile picture={line.picture} colours={[line.colour_hex]} label={line.name} />
             <div className="item-main">
               <span className="item-title">{line.name}</span>
-              <span className="item-sub">{line.quantity} · {line.colour}</span>
+              <span className="item-sub">{line.left_out ? "Left out" : `${line.quantity} · ${line.colour}`}</span>
+              {line.pickable && (
+                <nav className="qty" aria-label={`Quantity of ${line.name}`}>
+                  {line.breaks.map((b) => <a key={b.quantity} href={withPick(line.id, b.quantity)} aria-current={b.chosen ? "true" : undefined}>{b.quantity}</a>)}
+                  {line.left_out ? null : <a className="qty-out" href={withPick(line.id, 0)}>Remove</a>}
+                </nav>
+              )}
             </div>
-            <span className="item-total">{rand(line.line_total_cents)}</span>
+            <span className="item-total">{line.left_out ? "" : rand(line.line_total_cents)}</span>
             {line.tone !== "ok" && (
               <div className="item-note">
                 <Chip tone={line.tone}>{line.state_word}</Chip>

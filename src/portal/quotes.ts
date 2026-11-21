@@ -58,6 +58,8 @@ export async function portalQuotes(book: QuoteBook, clientId: string, tab: Porta
 export type PortalLine = {
   id: string; name: string; colour: string; colour_hex: string; picture: string | null; decoration_words: string; quantity: number;
   breaks: { quantity: number; chosen: boolean }[]; unit_cents: number | null; line_total_cents: number | null;
+  left_out: boolean; // the client's pick drops this piece
+  pickable: boolean; // agreed, with quoted quantities to choose between
   state: LineState; state_word: string; tone: Tone; note: string; suggestion: string | null;
 };
 export type PortalQuote = {
@@ -66,12 +68,49 @@ export type PortalQuote = {
   lines: PortalLine[]; totals: PriceTotals; delivery_words: string; valid_until: Date | null; terms: string;
   can: ReturnType<typeof clientCan>; waiting_on: ReturnType<typeof waitingOn>; not_agreed: number;
   messages: BookMessage[]; order_ref: string | null; open_count: number;
+  pick: QuotePick; picked: boolean; // what the client is trying out, before they ask for it
 };
+
+// A pick is the client trying out quantities before asking for them: line id to quantity, nought to leave a piece
+// out. It lives in the address, saves nothing, and only ever lands on a quantity Nelson already quoted, at the
+// price Nelson quoted for it. Asking for the pick is a change; Nelson answers with a new version.
+export type QuotePick = Record<string, number>;
+export function parsePick(text: string | undefined): QuotePick {
+  const pick: QuotePick = {};
+  for (const part of (text ?? "").slice(0, 600).split(",")) {
+    const m = /^(ql_[a-z0-9]{1,12}):(\d{1,5})$/.exec(part);
+    if (m) pick[m[1]!] = Number(m[2]);
+  }
+  return pick;
+}
+export const pickText = (pick: QuotePick): string => Object.entries(pick).map(([id, n]) => `${id}:${n}`).join(",");
+// Keeps only what the quote allows: an agreed line, and nought or one of its quoted quantities.
+export function allowedPick(lines: BookLine[], pick: QuotePick): QuotePick {
+  const out: QuotePick = {};
+  for (const l of lines) {
+    const n = pick[l.id];
+    if (n === undefined || l.state !== "agreed" || n === l.quantity) continue;
+    if (n === 0 || l.ladder.some((b) => b.min_quantity === n)) out[l.id] = n;
+  }
+  return out;
+}
+function picked(l: BookLine, n: number | undefined): { quantity: number; unit_cents: number | null; line_total_cents: number | null } {
+  if (n === undefined) return { quantity: l.quantity, unit_cents: l.unit_cents, line_total_cents: l.line_total_cents };
+  if (n === 0) return { quantity: 0, unit_cents: l.unit_cents, line_total_cents: 0 };
+  const quoted = l.ladder.find((b) => b.min_quantity === n)!.unit_cents;
+  return { quantity: n, unit_cents: quoted, line_total_cents: quoted * n };
+}
+
+// A pick's total is the quoted line prices added up, with set-up and delivery as sent. Nelson confirms it.
+function pickTotals(sent: PriceTotals, shown: { line_total_cents: number | null }[]): PriceTotals {
+  const lines_cents = shown.reduce((sum, l) => sum + (l.line_total_cents ?? 0), 0);
+  return { ...sent, lines_cents, total_cents: lines_cents + sent.setup_cents + sent.delivery_cents };
+}
 
 const termsWords = (totalCents: number, validUntil: Date | null) =>
   `Card or EFT · ${totalCents > QUOTE_SETTINGS.depositOverCents ? `${QUOTE_SETTINGS.depositPct}% deposit to start` : "paid in full to start"} · valid to ${day(validUntil)}`;
 
-export async function portalQuote(book: QuoteBook, clientId: string, ref: string, wanted: number | undefined, _now: Date): Promise<PortalQuote | null> {
+export async function portalQuote(book: QuoteBook, clientId: string, ref: string, wanted: number | undefined, _now: Date, asked: QuotePick = {}): Promise<PortalQuote | null> {
   const quote = await book.byRef(ref);
   // Someone else's quote and a quote that does not exist look the same from outside.
   if (!quote || quote.client.id !== clientId || !visible(quote)) return null;
@@ -82,21 +121,27 @@ export async function portalQuote(book: QuoteBook, clientId: string, ref: string
   const lines = isCurrent ? quote.lines : v.lines;
   const suggestionFor = (l: BookLine) => (isCurrent && l.state === "nelson_suggests" ? quote.amendments.find((a) => a.line_id === l.id && a.state === "suggested")?.suggestion ?? null : null);
   const states = lines.map((l) => l.state);
+  const can = isCurrent ? clientCan(quote.state) : clientCan("accepted");
+  const pick = can.change ? allowedPick(lines, asked) : {};
+  const isPicked = Object.keys(pick).length > 0;
+  const shown = lines.map((l) => picked(l, pick[l.id]));
   const open = (await book.forClient(clientId)).filter((q) => q.state === "working" || q.state === "final").length;
   return assertPortalSafe({
     client_name: quote.client.name, ref: quote.ref, title: quote.title, state: quote.state, state_word: STATE_WORDS[quote.state], tone: STATE_TONE[quote.state],
     versions: quote.versions.map((x) => ({ version: x.version, sent: day(x.sent_at), shown: x.version === v.version })), shown: v.version, is_current: isCurrent, changes: v.change_log,
-    lines: lines.map((l) => {
-      const chosen = chosenBreak(l.ladder, l.quantity);
+    lines: lines.map((l, i) => {
+      const now = shown[i]!;
+      const chosen = chosenBreak(l.ladder, now.quantity);
       return {
-        id: l.id, name: l.product_name, colour: l.colour, colour_hex: l.colour_hex, picture: l.picture, decoration_words: l.decoration_words, quantity: l.quantity,
-        breaks: l.ladder.map((b) => ({ quantity: b.min_quantity, chosen: b.min_quantity === chosen })), unit_cents: l.unit_cents, line_total_cents: l.line_total_cents,
+        id: l.id, name: l.product_name, colour: l.colour, colour_hex: l.colour_hex, picture: l.picture, decoration_words: l.decoration_words, quantity: now.quantity,
+        breaks: l.ladder.map((b) => ({ quantity: b.min_quantity, chosen: now.quantity > 0 && b.min_quantity === chosen })), unit_cents: now.unit_cents, line_total_cents: now.line_total_cents,
+        left_out: now.quantity === 0, pickable: can.change && l.state === "agreed" && l.ladder.length > 0,
         state: l.state, state_word: l.state === "waiting_on_supplier" ? `${PORTAL_WORDS[l.state]} ${day(l.due_date)}` : PORTAL_WORDS[l.state], tone: LINE_TONE[l.state], note: l.note, suggestion: suggestionFor(l),
       };
     }),
-    totals: v.totals, delivery_words: v.delivery_words, valid_until: quote.valid_until, terms: termsWords(v.totals.total_cents, quote.valid_until),
-    can: isCurrent ? clientCan(quote.state) : clientCan("accepted"), waiting_on: waitingOn(states), not_agreed: states.filter((s) => s !== "agreed").length,
-    messages: quote.messages, order_ref: quote.order_ref, open_count: open,
+    totals: isPicked ? pickTotals(v.totals, shown) : v.totals, delivery_words: v.delivery_words, valid_until: quote.valid_until, terms: termsWords(v.totals.total_cents, quote.valid_until),
+    can, waiting_on: waitingOn(states), not_agreed: states.filter((s) => s !== "agreed").length,
+    messages: quote.messages, order_ref: quote.order_ref, open_count: open, pick, picked: isPicked,
   }, `the Portal's quote ${ref}`);
 }
 

@@ -15,7 +15,7 @@ import { mockBook, mockQuotes, MOCK_PORTAL_CLIENT_ID } from "@/mock/book.ts";
 import { databaseConfigured, mockBookInUse, mockNelsonInUse } from "@/mock/mode.ts";
 import { deliveryEstimate, NelsonError, priceForCustomer, type CustomerPrice, type PriceRequest } from "@/nelson/client.ts";
 import { nelsonConfig } from "@/nelson/config.ts";
-import { portalDecide, portalQuote, portalQuotes } from "@/portal/quotes.ts";
+import { parsePick, portalDecide, portalQuote, portalQuotes } from "@/portal/quotes.ts";
 import { DecideScreen, DocumentScreen, QuoteScreen, QuotesScreen } from "@/portal/screens.tsx";
 import { quoteDocument } from "@/quotes/document.ts";
 import { rand, day } from "@/ui/format.ts";
@@ -216,7 +216,7 @@ describe("the Portal's quote screens", () => {
     expect(view.lines.map((l) => l.unit_cents)).toEqual([7000, 13500, 13000, 12500, 14000, 16000, 17500, 14000, 9000, 14500, 17000, 46000]);
     expect(view.totals).toMatchObject({ setup_cents: 0, delivery_cents: 0, total_cents: 4_850_000 });
     expect(view.totals.total_cents).toBe(view.lines.reduce((sum, l) => sum + l.line_total_cents!, 0));
-    const page = html(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop }));
+    const page = html(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop, askForPick: noop }));
     expect(page.match(/<img /g)).toHaveLength(12);
     keep("portal-collection", page);
     const desk = (await builder(book, nelsonStaffConfig({}), "Q-00014", NOW))!;
@@ -224,12 +224,33 @@ describe("the Portal's quote screens", () => {
     keep("desk-collection", html(createElement(BuilderScreen, { view: desk, said: null, actions })));
   });
 
+  test("a client tries quantities and drops pieces; every price is one Nelson already quoted", async () => {
+    const sent = (await portalQuote(book, MOCK_PORTAL_CLIENT_ID, "Q-00014", undefined, NOW))!;
+    expect(sent).toMatchObject({ picked: false, pick: {} });
+    // 100 shoppers at the quoted R 50, the beach tote left out, and three things the quote does not allow.
+    const asked = parsePick("ql_mm01:100,ql_mm03:0,ql_mm02:40,ql_zz99:25,ql_mm05:25,junk");
+    const view = (await portalQuote(book, MOCK_PORTAL_CLIENT_ID, "Q-00014", undefined, NOW, asked))!;
+    expect(view.pick).toEqual({ ql_mm01: 100, ql_mm03: 0 }); // 40 was never quoted, zz99 is not a line, 25 is no change
+    expect(view.lines[0]).toMatchObject({ quantity: 100, unit_cents: 5000, line_total_cents: 500_000, left_out: false });
+    expect(view.lines[2]).toMatchObject({ quantity: 0, line_total_cents: 0, left_out: true });
+    expect(view.lines[1]).toMatchObject({ quantity: 25, unit_cents: 13_500 });
+    expect(view.totals.total_cents).toBe(sent.totals.total_cents - 175_000 + 500_000 - 325_000);
+    const page = html(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop, askForPick: noop }));
+    expect(page).toContain("Ask Nelson for this");
+    expect(page).not.toContain(">Accept and pay<"); // a pick is a change: it is asked for, never paid for
+    keep("portal-collection-pick", page);
+    // A line with a change in flight cannot be picked, and an old version cannot be picked at all.
+    const working = (await portalQuote(book, MOCK_PORTAL_CLIENT_ID, "Q-00007", undefined, NOW, parsePick("ql_cap01:50")))!;
+    expect(working.lines.every((l) => !l.pickable)).toBe(true);
+    expect(working.picked).toBe(false);
+  });
+
   test("the quote shows live line states on the newest version and a frozen copy of an older one", async () => {
     const view = (await portalQuote(book, MOCK_PORTAL_CLIENT_ID, "Q-00007", undefined, NOW))!;
     expect(view).toMatchObject({ shown: 3, is_current: true, not_agreed: 2, waiting_on: "nelson", can: { acceptAndPay: false, change: true } });
     expect(view.lines.map((l) => [l.state_word, l.suggestion])).toEqual([["Your change · waiting on Nelson", null], ["Nelson suggests", "15 mm"]]);
     expect(view.lines[0]!.breaks).toEqual([{ quantity: 50, chosen: false }, { quantity: 100, chosen: true }, { quantity: 250, chosen: false }]);
-    const page = html(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop }));
+    const page = html(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop, askForPick: noop }));
     expect(page).toContain("2 items are waiting on an answer.");
     expect(page).not.toContain(">Accept and pay</a>"); // locked until every line reads Agreed
     keep("portal-quote", page);

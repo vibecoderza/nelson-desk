@@ -240,6 +240,13 @@ table.items td small { display: block; font-size: 12px; color: var(--ink-3); }
 .item-total { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; min-width: 104px; }
 .item .btn { min-width: 96px; }
 .item-note { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); font-size: 13.5px; color: var(--ink-2); }
+.qty { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--s2); }
+.qty a { min-width: 44px; padding: 5px 10px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-2); text-align: center; text-decoration: none; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.qty a:hover { box-shadow: inset 0 0 0 1px var(--ink); }
+.qty a[aria-current="true"] { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
+.qty a.qty-out { box-shadow: none; color: var(--ink-3); min-width: 0; }
+.item.is-line { scroll-margin-top: var(--s4); }
+.item.is-out .tile, .item.is-out .item-title { opacity: .45; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 240px); align-items: center; gap: var(--s4) var(--s5); padding: var(--s5); }
 .hero > div, .choice > div:first-of-type { display: grid; gap: 2px; }
 .hero-label { font-size: 13px; color: var(--ink-3); }
@@ -286,8 +293,10 @@ table.items td small { display: block; font-size: 12px; color: var(--ink-3); }
   .item.has-tile > .chip { grid-column: 2 / -1; justify-self: start; }
   .item > .btn, .item > form { grid-column: 1 / -1; }
   .item > form .btn, .item > .btn { width: 100%; }
-  .item.is-line { grid-template-columns: 88px minmax(0, 1fr) max-content; }
+  .item.is-line { grid-template-columns: 88px minmax(0, 1fr); }
   .item.is-line .tile { width: 88px; height: 88px; }
+  .item.is-line .item-total { grid-column: 2; text-align: left; min-width: 0; }
+  .item.is-line .item-total:empty { display: none; }
   .hero-total { font-size: 30px; }
   .choice { padding: var(--s4); }
   .sheet { padding: var(--s5) var(--s4); min-height: 0; }

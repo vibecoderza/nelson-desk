@@ -307,7 +307,7 @@ describe("the quote screens a client can open", () => {
       }
       for (const v of [undefined, ...quote.versions.map((x) => x.version)]) {
         const view = (await portalQuote(book, client, quote.ref, v, NOW))!;
-        clean(`${quote.ref} v${v ?? "latest"}`, view, renderToStaticMarkup(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop })));
+        clean(`${quote.ref} v${v ?? "latest"}`, view, renderToStaticMarkup(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop, askForPick: noop })));
         const doc = quoteDocument(quote, v)!;
         clean(`${quote.ref} document v${v ?? "latest"}`, doc, renderToStaticMarkup(createElement(DocumentScreen, { doc, printButton: null })));
         pages += 2;
