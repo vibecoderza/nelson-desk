@@ -32,10 +32,11 @@ export function QuotesScreen({ view, said, reopen }: { view: PortalQuotes; said:
       <section className="list">
         {view.rows.length === 0 && <p className="empty">Nothing here yet.</p>}
         {view.rows.map((row) => (
-          <article key={row.ref} className="item">
+          <article key={row.ref} className="item has-tile">
+            <a className="tile" href={`/quotes/${row.ref}`} aria-hidden="true" tabIndex={-1}>{row.tiles.map((hex, i) => <i key={i} style={{ background: hex }} />)}</a>
             <a className="item-main" href={`/quotes/${row.ref}`}>
               <span className="item-title">{row.title}</span>
-              <span className="item-sub">{row.ref} · {row.changed}</span>
+              <span className="item-sub">{row.ref}</span>
             </a>
             <Chip tone={row.chip.tone}>{row.chip.words}</Chip>
             <span className="item-total">{rand(row.total_cents)}</span>
@@ -43,10 +44,6 @@ export function QuotesScreen({ view, said, reopen }: { view: PortalQuotes; said:
           </article>
         ))}
       </section>
-      <details className="more">
-        <summary>How a quote works</summary>
-        <p>Ask for any change. We answer with a new version and a price. When every line is agreed, you accept and pay, and it becomes an order. Every version is kept.</p>
-      </details>
     </div>
   );
 }
@@ -69,7 +66,7 @@ export function QuoteScreen({ view, said, takeSuggestion, ask }: { view: PortalQ
         <div>
           <span className="hero-label">Total</span>
           <b className="hero-total">{rand(view.totals.total_cents)}</b>
-          <span className="small muted">{view.delivery_words}. No VAT charged.</span>
+          <span className="small muted">Delivered. No VAT charged.</span>
         </div>
         <div className="hero-do">
           {view.order_ref ? <span className="small">Paid. This is now order {view.order_ref}.</span>
@@ -173,14 +170,13 @@ export function DecideScreen({ view, said, accept, decline }: { view: PortalDeci
         {view.can.acceptAndPay
           ? <button className="btn is-big is-next">{view.deposit ? "Accept and pay the deposit" : "Accept and pay"}</button>
           : <><span className="btn is-big is-off">Accept and pay</span><p className="small tone-warn">This unlocks when every item is agreed. <a href={`/quotes/${view.ref}`}>See what is waiting</a></p></>}
-        <p className="small muted">You sign a proof first. Nothing is made until you do.</p>
+        <p className="small muted">You sign a proof before anything is made.</p>
       </form>
       {view.can.decline && (
         <details className="more">
           <summary>Not going ahead?</summary>
           <form action={decline} className="stack">
             <input type="hidden" name="ref" value={view.ref} />
-            <span>Tell us why. It takes ten seconds.</span>
             <div className="reasons" role="radiogroup" aria-label="Reason">
               {view.reasons.map((r) => <label key={r.value}><input type="radio" name="reason" value={r.value} />{r.words}</label>)}
             </div>
@@ -214,4 +210,4 @@ export function DocumentScreen({ doc, printButton }: { doc: QuoteDocument; print
   );
 }
 
-export const PortalMockBar = () => <MockBar>These are sample quotes. Buttons check the rules and save nothing yet.</MockBar>;
+export const PortalMockBar = () => <MockBar>Nothing is saved yet.</MockBar>;

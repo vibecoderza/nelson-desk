@@ -115,7 +115,7 @@ export const openQuoteCount = async (book: QuoteBook) => (await book.all()).filt
 // ---- The builder ----
 
 export type BuilderLine = {
-  id: string; name: string; colour: string; product_code: string; decoration_words: string; quantity: number;
+  id: string; name: string; colour: string; colour_hex: string; product_code: string; decoration_words: string; quantity: number;
   unit_cents: number | null; line_total_cents: number | null; setup_cents: number | null;
   price: "live" | "frozen" | "none"; // live: Nelson answered just now. frozen: the sent version's figure. none: not priced
   staff: StaffLine | null; state: LineState; state_word: string; tone: Tone;
@@ -158,7 +158,7 @@ export async function builder(book: QuoteBook, nelson: NelsonConfig, ref: string
     const priced = live?.status === "priced";
     const frozen = l.unit_cents !== null;
     return {
-      id: l.id, name: l.product_name, colour: l.colour, product_code: l.product_code, decoration_words: l.decoration_words, quantity: l.quantity,
+      id: l.id, name: l.product_name, colour: l.colour, colour_hex: l.colour_hex, product_code: l.product_code, decoration_words: l.decoration_words, quantity: l.quantity,
       unit_cents: priced ? live.unit_cents : l.unit_cents, line_total_cents: priced ? live.line_total_cents : l.line_total_cents, setup_cents: priced ? live.setup_cents : l.setup_cents,
       price: priced ? "live" : frozen ? "frozen" : "none", staff: priced ? live.staff : null,
       state: l.state, state_word: DESK_WORDS[l.state], tone: LINE_TONE[l.state],

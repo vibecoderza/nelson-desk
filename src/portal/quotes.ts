@@ -17,6 +17,7 @@ const TAB_OF: Record<Exclude<QuoteState, "draft">, PortalTab> = { working: "open
 
 export type PortalRow = {
   ref: string; state_word: string; tone: Tone; title: string; changed: string; version: number; total_cents: number;
+  tiles: string[]; // one colour per product, until the customiser publishes mockups
   chip: { tone: Tone; words: string };
   action: { kind: "open" | "decide" | "ask_again" | "reopen" | "order"; label: string };
 };
@@ -39,7 +40,7 @@ function row(q: BookQuote, now: Date): PortalRow {
     expired: { changed: `No answer · closed ${day(q.decided_at)}`, chip: { tone: "plain", words: "Expired" }, action: { kind: "ask_again", label: "Ask again" } },
   };
   const state = q.state as Exclude<QuoteState, "draft">;
-  return { ref: q.ref, state_word: STATE_WORDS[state], tone: STATE_TONE[state], title: q.title, version: v.version, total_cents: v.totals.total_cents, ...by[state] };
+  return { ref: q.ref, state_word: STATE_WORDS[state], tone: STATE_TONE[state], title: q.title, version: v.version, total_cents: v.totals.total_cents, tiles: q.lines.slice(0, 3).map((l) => l.colour_hex), ...by[state] };
 }
 
 export async function portalQuotes(book: QuoteBook, clientId: string, tab: PortalTab, now: Date): Promise<PortalQuotes | null> {

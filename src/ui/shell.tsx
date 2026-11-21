@@ -26,22 +26,14 @@ function Rail({ items }: { items: NavItem[] }) {
 export function DeskShell({ current, openQuotes, children }: { current: "today" | "quotes"; openQuotes: number; children: ReactNode }) {
   const items: NavItem[] = [
     { label: "Today", href: "/", current: current === "today" },
-    { label: "Inbox" },
     { label: "Quotes", href: "/quotes", count: openQuotes, current: current === "quotes" },
-    { label: "Orders" }, { label: "Clients" }, { label: "Suppliers" }, { label: "Business" }, { label: "Settings" },
   ];
   return (
     <div className="app">
       <nav className="nav" aria-label="Desk">
         <a className="brand" href="/"><span className="wordmark">nelson</span><span className="label">Desk</span></a>
         <Rail items={items} />
-        <div className="nav-foot">
-          <div className="nav-card">
-            <span className="label">Feeds</span>
-            <span><i className="dot is-warn" />Nelson · stand-in, from fixtures</span>
-            <span><i className="dot is-warn" />Quotes · stand-in book</span>
-          </div>
-        </div>
+        <div className="nav-foot"><span className="small muted" style={{ padding: "0 8px" }}>Sample data</span></div>
       </nav>
       <main className="main">{children}</main>
     </div>
@@ -65,7 +57,6 @@ export function PortalShell({ current, clientName, openQuotes, contact, children
           <div className="nav-card is-well">
             <span className="label">Your contact</span>
             <span className="strong">{contact} at Nelson</span>
-            <span className="muted">Replies within the working day</span>
           </div>
           <span className="small muted" style={{ padding: "0 8px" }}>Made by <span className="wordmark" style={{ fontSize: 16 }}>nelson</span></span>
         </div>
