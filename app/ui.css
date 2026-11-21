@@ -214,6 +214,39 @@ table.items td small { display: block; font-size: 12px; color: var(--ink-3); }
 .sheet-total b { font-family: var(--mono); font-size: 20px; }
 .sheet-foot { margin-top: auto; padding-top: var(--s4); border-top: 1px solid var(--line); font-size: 12.5px; }
 
+/* The Portal, calm: one column, plain rows, one next step. The detail opens when it is asked for. */
+.page.is-calm { max-width: 760px; margin: 0 auto; gap: var(--s4); font-size: 15px; }
+.page.is-narrow { max-width: 520px; }
+.page.is-calm .head h1 { font-size: 26px; flex-basis: 100%; }
+.page.is-calm .head .crumb { flex-basis: 100%; }
+.page.is-calm .head h1 + .chip { margin-top: -4px; }
+.list { display: grid; background: var(--panel); border-radius: var(--r-panel); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.item { display: grid; grid-template-columns: minmax(0, 1fr) max-content max-content max-content; align-items: center; gap: var(--s3) var(--s4); padding: var(--s4) var(--s5); }
+.item + .item { border-top: 1px solid var(--line); }
+.item.is-line { grid-template-columns: 56px minmax(0, 1fr) max-content; }
+.item.is-line .tile { width: 56px; height: 56px; }
+.item-main { display: grid; gap: 2px; min-width: 0; text-decoration: none; }
+.item-title { font-weight: 600; font-size: 16px; line-height: 1.3; }
+.item-sub { font-size: 13px; color: var(--ink-3); }
+.item-total { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; min-width: 104px; }
+.item .btn { min-width: 96px; }
+.item-note { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); font-size: 13.5px; color: var(--ink-2); }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 240px); align-items: center; gap: var(--s4) var(--s5); padding: var(--s5); }
+.hero > div, .choice > div:first-of-type { display: grid; gap: 2px; }
+.hero-label { font-size: 13px; color: var(--ink-3); }
+.hero-total { font-size: 34px; font-weight: 700; letter-spacing: -.03em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.hero-do { display: grid; gap: var(--s2); text-align: center; }
+.more { background: var(--panel); border-radius: var(--r-panel); box-shadow: inset 0 0 0 1px var(--line); }
+.more summary { padding: var(--s3) var(--s5); cursor: pointer; font-weight: 500; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+.more summary::-webkit-details-marker { display: none; }
+.more summary::after { content: "+"; font-size: 18px; color: var(--ink-3); }
+.more[open] summary::after { content: "–"; }
+.more > :not(summary) { padding: 0 var(--s5) var(--s4); }
+.more > :not(summary) + :not(summary) { padding-top: 0; }
+.page.is-calm .chip { font-family: var(--sans); font-size: 12.5px; }
+.page.is-calm .panel-body { padding: var(--s4) var(--s5); }
+.page.is-calm .links { padding: 0 var(--s1); font-size: 14px; color: var(--ink-2); }
+
 /* Narrow screens: the rail becomes a top bar, columns stack, rows fold. A client reads a quote on a phone. */
 @media (max-width: 1080px) {
   .cols, .cols.is-even { grid-template-columns: minmax(0, 1fr); }
@@ -236,7 +269,13 @@ table.items td small { display: block; font-size: 12px; color: var(--ink-3); }
   .tile { width: 56px; height: 56px; }
   .line > :nth-child(n+3) { grid-column: 2; }
   .line-money b, .line-money span { text-align: left; }
-  .options, .sheet-two, .budget-row { grid-template-columns: minmax(0, 1fr); }
+  .options, .sheet-two, .budget-row, .hero { grid-template-columns: minmax(0, 1fr); }
+  .item { grid-template-columns: minmax(0, 1fr) max-content; padding: var(--s4); }
+  .item > .btn, .item > form { grid-column: 1 / -1; }
+  .item > form .btn, .item > .btn { width: 100%; }
+  .item.is-line { grid-template-columns: 48px minmax(0, 1fr) max-content; }
+  .item.is-line .tile { width: 48px; height: 48px; }
+  .hero-total { font-size: 30px; }
   .choice { padding: var(--s4); }
   .sheet { padding: var(--s5) var(--s4); min-height: 0; }
   .btn { min-height: 40px; }

@@ -34,3 +34,4 @@ Brief sections 5 and 8. Every card carries: conforms to Architecture blueprint (
 6. Deposit (50% over R 20 000), validity (14 days) and lead time (7 working days) sit in `src/quotes/settings.ts` at the brief's recommended defaults.
 7. The design's "Tumbler removed" strip disagreed with its own lines. The stand-in quote keeps the tumbler and its numbers are Nelson's price fixture, so every total adds up.
 8. On mock data every signed-in Portal session sees the one sample client (Mother Moon Herbals). The quotes are invented; no client's real data exists yet.
+9. The Portal is one calm column (Alan, 21 Nov 2026: it must not read like a spreadsheet). Plain rows, the total and one next step up top, few words. Price breakdown, versions and declining open when asked for. Quantity breaks, unbuilt buttons and unbuilt menu items are off the client's screen until they work.

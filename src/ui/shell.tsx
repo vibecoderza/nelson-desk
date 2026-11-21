@@ -52,7 +52,6 @@ export function PortalShell({ current, clientName, openQuotes, contact, children
   const items: NavItem[] = [
     { label: "Home", href: "/", current: current === "home" },
     { label: "Quotes", href: "/quotes", count: openQuotes, current: current === "quotes" },
-    { label: "Orders" }, { label: "Proofs" }, { label: "Mockup shop" }, { label: "Artwork" }, { label: "Brand kit" }, { label: "Settings" },
   ];
   return (
     <div className="app">

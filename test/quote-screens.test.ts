@@ -215,8 +215,8 @@ describe("the Portal's quote screens", () => {
     expect(view.lines.map((l) => [l.state_word, l.suggestion])).toEqual([["Your change · waiting on Nelson", null], ["Nelson suggests", "15 mm"]]);
     expect(view.lines[0]!.breaks).toEqual([{ quantity: 50, chosen: false }, { quantity: 100, chosen: true }, { quantity: 250, chosen: false }]);
     const page = html(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop }));
-    expect(page).toContain("2 lines are waiting.");
-    expect(page).not.toContain(">Accept v3 and pay</a>"); // locked until every line reads Agreed
+    expect(page).toContain("2 items are waiting on an answer.");
+    expect(page).not.toContain(">Accept and pay</a>"); // locked until every line reads Agreed
     keep("portal-quote", page);
 
     const old = (await portalQuote(book, MOCK_PORTAL_CLIENT_ID, "Q-00007", 2, NOW))!;
@@ -230,10 +230,11 @@ describe("the Portal's quote screens", () => {
     expect(view).toMatchObject({ total_cents: 630_000, deposit: false, can: { acceptAndPay: true, decline: true } });
     expect(view.reasons.map((r) => r.value)).toEqual(["too_expensive", "timing", "went_elsewhere", "budget_cut", "just_exploring", "something_else"]);
     const page = html(createElement(DecideScreen, { view, said: null, accept: noop, decline: noop }));
-    expect(page).toContain(`Accept and pay ${rand(630_000)}`);
+    expect(page).toContain(`<b class="hero-total">${rand(630_000)}</b>`);
+    expect(page).toContain(">Accept and pay</button>");
     keep("portal-decide", page);
     const working = (await portalDecide(book, MOCK_PORTAL_CLIENT_ID, "Q-00007"))!;
-    expect(html(createElement(DecideScreen, { view: working, said: null, accept: noop, decline: noop }))).toContain("Accept and pay unlocks when every line reads Agreed");
+    expect(html(createElement(DecideScreen, { view: working, said: null, accept: noop, decline: noop }))).toContain("This unlocks when every item is agreed");
     keep("portal-document", html(createElement(DocumentScreen, { doc: quoteDocument((await book.byRef("Q-00012"))!)!, printButton: null })));
   });
 });
