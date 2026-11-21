@@ -9,7 +9,9 @@ export function clerkKeys(surface: Surface, env: Record<string, string | undefin
   const prefix = surface === "desk" ? "CLERK_DESK" : "CLERK_PORTAL";
   const publishableKey = env[`${prefix}_PUBLISHABLE_KEY`];
   const secretKey = env[`${prefix}_SECRET_KEY`];
-  return publishableKey && secretKey ? { publishableKey, secretKey } : null;
+  // A malformed key counts as no key: the proxy answers 503 instead of Clerk throwing a 500 on every request.
+  const ok = publishableKey?.startsWith("pk_") && secretKey?.startsWith("sk_");
+  return ok ? { publishableKey: publishableKey!, secretKey: secretKey! } : null;
 }
 
 type Claims = Record<string, unknown> | null | undefined;
@@ -52,3 +54,9 @@ export const hostsFromEnv = (env: Record<string, string | undefined> = process.e
 });
 
 export const staffEmailsFromEnv = (env: Record<string, string | undefined> = process.env): string[] => (env.DESK_STAFF_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+
+// Alan, 21 Nov 2026: the Desk runs on the staff allow-list alone until it holds real data. DESK_SECOND_FACTOR=off
+// skips the second factor only while no database is configured. The moment DATABASE_URL or DATABASE_URL_PORTAL is
+// set, the second factor is required again, whatever the switch says. Any other value, or none, requires it.
+export const secondFactorRequiredFromEnv = (env: Record<string, string | undefined> = process.env): boolean =>
+  !(env.DESK_SECOND_FACTOR === "off" && !env.DATABASE_URL && !env.DATABASE_URL_PORTAL);

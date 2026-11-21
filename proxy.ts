@@ -3,7 +3,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import { decide, responseHeaders, surfaceForHost, type Decision, type Surface } from "./src/surface/access.ts";
-import { clerkKeys, hostsFromEnv, sessionFrom, staffEmailsFromEnv } from "./src/surface/clerk.ts";
+import { clerkKeys, hostsFromEnv, secondFactorRequiredFromEnv, sessionFrom, staffEmailsFromEnv } from "./src/surface/clerk.ts";
 
 const withHeaders = (res: NextResponse, surface: Surface, decision: Decision) => {
   for (const [k, v] of Object.entries(responseHeaders(surface, decision))) res.headers.set(k, v);
@@ -16,7 +16,7 @@ const surfaceOf = (req: NextRequest) => surfaceForHost(req.headers.get("x-forwar
 const guarded = clerkMiddleware(
   async (auth, req) => {
     const surface = surfaceOf(req)!;
-    const decision = decide(surface, req.nextUrl.pathname, sessionFrom(await auth()), staffEmailsFromEnv());
+    const decision = decide(surface, req.nextUrl.pathname, sessionFrom(await auth()), staffEmailsFromEnv(), secondFactorRequiredFromEnv());
     switch (decision.action) {
       case "page": {
         const url = req.nextUrl.clone();
