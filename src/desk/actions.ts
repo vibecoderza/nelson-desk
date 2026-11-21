@@ -8,6 +8,8 @@ import { followUps, quoteTransition, type FollowUpKind } from "../domain/quote.t
 import type { BookQuote } from "../quotes/book.ts";
 import { QUOTE_SETTINGS } from "../quotes/settings.ts";
 import { NOTHING_SAVED, quoteBook, saidUrl, type Said } from "../quotes/source.ts";
+import { plural } from "../ui/format.ts";
+import { costingBook } from "./costing.ts";
 
 const REF = /^Q-\d{5}$/;
 const text = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
@@ -40,10 +42,22 @@ export async function sendVersion(form: FormData): Promise<void> {
   if (!q) return redirect(saidUrl("/quotes", refused("that quote is not here")));
   // A version freezes Nelson's prices. A line Nelson has not priced has nothing to freeze.
   if (q.lines.some((l) => l.unit_cents === null)) return redirect(saidUrl(page(form, q), refused("a line has no price from Nelson yet, so there is nothing to send")));
+  // No quote goes out on a cost nobody has looked at.
+  const ticks = await costingBook().ticks(q.ref);
+  const open = q.lines.filter((l) => !ticks[l.id]).length;
+  if (open) return redirect(saidUrl(page(form, q), refused(`confirm the costing on ${plural(open, "line")} first`)));
   const ctx = { allLinesAgreed: allAgreed(q.lines.map((l) => l.state)), lineCount: q.lines.length, now: new Date(), validUntil: q.valid_until };
   const next = quoteTransition({ state: q.state, version: q.version }, { type: q.state === "draft" ? "send" : "round_answered" }, "staff", ctx);
   if (!next.ok) return redirect(saidUrl(page(form, q), refused(next.reason)));
   return redirect(saidUrl(page(form, q), done(`v${next.value.version} would be frozen and sent, and the quote would read ${next.value.state === "final" ? "Final" : "Working"}`)));
+}
+
+export async function confirmCosting(form: FormData): Promise<void> {
+  const q = await quoteOf(form);
+  const line = q?.lines.find((l) => l.id === text(form, "line"));
+  if (!q || !line) return redirect(saidUrl(page(form, q), refused("that line is not on this quote")));
+  if (line.unit_cents === null) return redirect(saidUrl(page(form, q), refused("Nelson holds no cost for this line yet, so there is nothing to confirm")));
+  return redirect(saidUrl(page(form, q), done(`The costing on ${line.product_name} would be confirmed under your name, against today’s price version`)));
 }
 
 export async function sendFollowUp(form: FormData): Promise<void> {

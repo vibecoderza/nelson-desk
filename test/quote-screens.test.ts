@@ -8,6 +8,7 @@ import path from "node:path";
 import type { Server } from "node:http";
 import { fixture } from "@/contract/load.ts";
 import { builder, pipeline } from "@/desk/quotes.ts";
+import { brandingMatches, lineCosting, type CostingBook } from "@/desk/costing.ts";
 import { board } from "@/desk/orders.ts";
 import { mockOrders } from "@/mock/orders.ts";
 import { nelsonStaffConfig } from "@/desk/mock-nelson-staff.ts";
@@ -27,7 +28,7 @@ import { listen, MOCK_DESK_KEY, MOCK_STAFF_KEY } from "../mock/server.ts";
 const NOW = new Date("2026-11-21T11:00:00Z");
 const book = mockBook(() => NOW);
 const noop = async () => {};
-const actions = { followUp: noop, rework: noop, answer: noop, send: noop, reply: noop };
+const actions = { followUp: noop, rework: noop, answer: noop, send: noop, reply: noop, confirm: noop };
 const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el);
 const refusal = (p: Promise<unknown>) => p.then(() => "no refusal", (e: unknown) => (e instanceof NelsonError ? `${e.status} ${e.code}` : String(e)));
 
@@ -135,6 +136,44 @@ describe("the Desk's pipeline", () => {
     expect(view.flat.map((r) => r.ref)).toEqual(["Q-00008"]);
     keep("desk-pipeline", html(createElement(PipelineScreen, { view: await pipeline(book, "open", NOW), said: null, actions })));
     keep("desk-today", html(createElement(TodayScreen, { view: await pipeline(book, "open", NOW), orders: await board(mockOrders(() => NOW), "open", NOW), said: null, actions: { ...actions, place: noop } })));
+  });
+});
+
+describe("the costing check", () => {
+  const ticks: CostingBook = { ticks: async () => ({ ql_cap01: { by: "Alan", at: new Date("2026-11-20T09:12:00Z"), price_version: "pv_2026-11-19_a1" } }) };
+  test("every line shows product, print and set-up cost with its source, open, and says who confirmed it", async () => {
+    const view = (await builder(book, nelsonStaffConfig({}), "Q-00007", NOW, ticks))!;
+    expect(view.costing).toEqual({ confirmed: 1, total: 2 });
+    expect(view.lines.map((l) => [l.costing.state, l.costing.matches])).toEqual([["confirmed", true], ["to_confirm", true]]);
+    const page = html(createElement(BuilderScreen, { view, said: null, actions }));
+    expect(page).not.toContain("<details class=\"more\"><summary>Cost"); // not folded away
+    for (const words of ["Costing check", "1 of 2 confirmed", "Confirmed · Alan", "Confirm costing", "Open at source", "https://supplier.example/products/BH-0042", "about 4 200 stitches", `${rand(2311)} each`, `${rand(15_000)} once`, `charged ${rand(35_000)}`, "Laser engrave · wrap · 40 × 15 mm"]) expect(page, words).toContain(words);
+    expect(page).toContain('rel="noreferrer noopener"'); // the source never learns the Desk's address
+    keep("desk-costing", page);
+  });
+
+  test("a confirmation is held against its price version: a cost that moves asks again", () => {
+    const staff = fixture<StaffPrice>("price-response.staff.json").lines[0]!.staff!;
+    const asked = [{ position: "front", method: "embroidery", colours: 2, width_mm: 60, height_mm: 25 }];
+    const tick = { by: "Alan", at: NOW, price_version: "pv_old" };
+    expect(lineCosting(staff, asked, tick, "pv_new").state).toBe("moved");
+    expect(lineCosting(staff, asked, { ...tick, price_version: "pv_new" }, "pv_new").state).toBe("confirmed");
+    expect(lineCosting(staff, asked, undefined, "pv_new").state).toBe("to_confirm");
+    expect(lineCosting(null, asked, tick, "pv_new")).toMatchObject({ state: "no_cost", tick: null, matches: null });
+  });
+
+  test("costed for one size, quoted at another: the line says so", () => {
+    const staff = fixture<StaffPrice>("price-response.staff.json").lines[0]!.staff!;
+    const bigger = [{ position: "front", method: "embroidery", colours: 2, width_mm: 80, height_mm: 33 }];
+    expect(brandingMatches(bigger, staff.branding_costs)).toBe(false);
+    expect(brandingMatches(bigger, undefined)).toBeNull(); // Nelson has not said what it costed
+    expect(lineCosting(staff, bigger, undefined, "pv").asked).toEqual(["Embroidery · front · 2 threads · 80 × 33 mm"]);
+  });
+
+  test("with no confirmations nothing counts as confirmed, and a line with no cost cannot be", async () => {
+    const view = (await builder(book, nelsonStaffConfig({}), "Q-00012", NOW, ticks))!;
+    expect(view.costing).toEqual({ confirmed: 0, total: 1 });
+    expect(html(createElement(BuilderScreen, { view, said: null, actions }))).toContain("No cost from Nelson yet");
   });
 });
 

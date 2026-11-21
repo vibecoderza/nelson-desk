@@ -95,6 +95,15 @@ describe("the contract files", () => {
     expect(fixture<{ total_cents: number }>("order-from-quote-request.json").total_cents).toBe(s.totals.total_cents);
   });
 
+  test("the costing detail adds up: what was costed per decoration is the line's branding and set-up cost", () => {
+    type L = { staff: { branding_cost_cents: number; setup_cost_cents: number; supplier_url: string; cost_as_of: string; branding_costs: { unit_cost_cents: number; setup_cost_cents: number }[] } };
+    for (const l of fixture<{ lines: L[] }>("price-response.staff.json").lines) {
+      expect(l.staff.branding_costs.reduce((n, b) => n + b.unit_cost_cents, 0)).toBe(l.staff.branding_cost_cents);
+      expect(l.staff.branding_costs.reduce((n, b) => n + b.setup_cost_cents, 0)).toBe(l.staff.setup_cost_cents);
+      expect(l.staff.supplier_url).toMatch(/^https:\/\/supplier\.example\//); // a stand-in, never a real supplier page
+    }
+  });
+
   test("one answer, two views: the customer fixture is the staff fixture with every staff key removed", () => {
     expect(customerViewOf(fixture("price-response.staff.json"))).toEqual(fixture("price-response.customer.json"));
   });

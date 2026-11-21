@@ -386,3 +386,18 @@ select.field { appearance: auto; min-width: 0; }
 .picks input { width: 18px; height: 18px; accent-color: var(--ink); }
 .picks input:disabled { opacity: .5; }
 .save-row { margin-top: var(--s3); display: flex; justify-content: flex-end; }
+
+/* Costing check: open on every quote, one card per line. Desk only. */
+.costing { display: grid; gap: var(--s3); }
+.costing-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); flex-wrap: wrap; }
+.cost-card { display: grid; gap: var(--s3); padding: var(--s4) var(--s5); background: var(--panel); border-radius: var(--r-panel); box-shadow: inset 0 0 0 1px var(--line); }
+.cost-top { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.cost-top .item-main { flex: 1 1 220px; min-width: 0; }
+.cost-top .swatch { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line); flex: none; }
+.cost-rows { margin: 0; display: grid; }
+.cost-rows > div { display: grid; grid-template-columns: 72px 132px minmax(0, 1fr); gap: var(--s3); padding: var(--s2) 0; align-items: baseline; }
+.cost-rows > div + div { border-top: 1px solid var(--line); }
+.cost-rows dt { color: var(--ink-3); font-size: 13px; }
+.cost-rows dd { margin: 0; font-size: 14px; }
+.cost-rows dd + dd { color: var(--ink-2); }
+@media (max-width: 560px) { .cost-rows > div { grid-template-columns: 64px minmax(0, 1fr); } .cost-rows dd + dd { grid-column: 2; } }

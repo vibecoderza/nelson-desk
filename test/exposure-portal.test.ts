@@ -52,7 +52,7 @@ describe("the walker itself", () => {
     const kinds = new Set(leaks.map((l) => l.kind));
     expect(kinds.has("private_key")).toBe(true);
     expect(kinds.has("supplier_name")).toBe(true);
-    for (const key of ["staff", "supplier", "supplier_code", "stock", "incoming_stock", "unit_cost_cents", "branding_cost_cents", "markup_applied_pct", "margin_cents", "margin_pct", "cost_cents"]) {
+    for (const key of ["staff", "supplier", "supplier_code", "stock", "incoming_stock", "unit_cost_cents", "branding_cost_cents", "markup_applied_pct", "margin_cents", "margin_pct", "cost_cents", "setup_cost_cents", "cost_as_of", "supplier_url", "branding_costs"]) {
       expect(leaks.some((l) => l.value === key), `${key} was not caught`).toBe(true);
     }
   });
@@ -104,6 +104,8 @@ describe("the contract's customer shapes", () => {
 
   test("the customer view made from a staff answer is clean", () => {
     expect(leaksIn(customerViewOf(fixture("price-response.staff.json")))).toEqual([]);
+    // The costing check's detail (set-up cost, source link, stitch count) goes with the staff key.
+    expect(JSON.stringify(customerViewOf(fixture("price-response.staff.json")))).not.toMatch(/supplier\.example|stitches|branding_costs|setup_cost/);
   });
 
   test("the Nelson client refuses to pass on a customer price that carries staff data", async () => {
@@ -333,7 +335,7 @@ describe("the quote screens a client can open", () => {
 
   test("the check is live: the Desk's builder, drawn the same way, trips every part of it", async () => {
     const view = (await builder(book, nelsonStaffConfig({}), "Q-00007", NOW))!;
-    const page = renderToStaticMarkup(createElement(BuilderScreen, { view, said: null, actions: { answer: noop, send: noop, reply: noop } }));
+    const page = renderToStaticMarkup(createElement(BuilderScreen, { view, said: null, actions: { answer: noop, send: noop, reply: noop, confirm: noop } }));
     expect(leaksIn(view).some((l) => l.kind === "private_key")).toBe(true);
     expect(leaksInText(page).some((l) => l.kind === "supplier_name")).toBe(true);
     expect(page).toMatch(STAFF_WORDS);

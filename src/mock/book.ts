@@ -54,7 +54,7 @@ export function mockQuotes(now: Date): BookQuote[] {
   const [capAsk, tumAsk] = request.lines as [typeof request.lines[0], typeof request.lines[0]];
   const cap = (over: Partial<BookLine> = {}): BookLine => line(1, {
     id: capPrice.line_id, product_code: capAsk.product_code, product_name: "6 Panel Cap", colour: "Forest", colour_hex: "#2f5d46", quantity: capPrice.quantity,
-    decoration: capAsk.decoration as Decoration[], decoration_words: "Front embroidery · 2 threads · 80 × 33 mm", design: { ref: capAsk.design.ref, rev: 2 },
+    decoration: capAsk.decoration as Decoration[], decoration_words: "Front embroidery · 2 threads · 60 × 25 mm", design: { ref: capAsk.design.ref, rev: 2 },
     unit_cents: capPrice.unit_cents, setup_cents: capPrice.setup_cents, line_total_cents: capPrice.line_total_cents, ladder: capPrice.ladder, ...over,
   });
   const tumbler = (over: Partial<BookLine> = {}): BookLine => line(2, {

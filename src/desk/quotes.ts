@@ -10,6 +10,7 @@ import { DECLINE_WORDS, LINE_TONE, STATE_WORDS } from "../quotes/words.ts";
 import { day, isoDay, plural } from "../ui/format.ts";
 import type { Tone } from "../ui/bits.tsx";
 import { priceForStaff, type StaffLine, type StaffPrice } from "./nelson-staff.ts";
+import { lineCosting, type CostingBook, type LineCosting } from "./costing.ts";
 
 const DAY = 86_400_000;
 const isOpen = (s: QuoteState) => s === "draft" || s === "working" || s === "final";
@@ -119,12 +120,13 @@ export type BuilderLine = {
   unit_cents: number | null; line_total_cents: number | null; setup_cents: number | null;
   price: "live" | "frozen" | "none"; // live: Nelson answered just now. frozen: the sent version's figure. none: not priced
   staff: StaffLine | null; state: LineState; state_word: string; tone: Tone;
+  design: { ref: string; rev: number } | null; costing: LineCosting;
 };
 export type Builder = {
   ref: string; client: { id: string; name: string; contact: string; phone_tail: string }; title: string; state: QuoteState; state_word: string; version: number; next_version: number;
   lines: BuilderLine[]; totals: PriceTotals | null; staff_totals: StaffPrice["staff"] | null; price_version: string | null; nelson: { ok: boolean; words: string };
   changes: BookAmendment[]; freight: DeliveryEstimate | null; freight_chosen: string | null; ship_to: string;
-  waiting: { tone: Tone; words: string }; can_send: boolean;
+  waiting: { tone: Tone; words: string }; can_send: boolean; costing: { confirmed: number; total: number };
   messages: BookMessage[]; versions: { version: number; sent: string }[]; valid_until: Date | null;
 };
 
@@ -135,9 +137,10 @@ function priceRequest(q: BookQuote): PriceRequest {
   };
 }
 
-export async function builder(book: QuoteBook, nelson: NelsonConfig, ref: string, now: Date): Promise<Builder | null> {
+export async function builder(book: QuoteBook, nelson: NelsonConfig, ref: string, now: Date, costing: CostingBook = { ticks: async () => ({}) }): Promise<Builder | null> {
   const q = await book.byRef(ref);
   if (!q) return null;
+  const ticks = await costing.ticks(q.ref);
   const sent = latestVersion(q);
 
   let price: StaffPrice | null = null;
@@ -161,6 +164,7 @@ export async function builder(book: QuoteBook, nelson: NelsonConfig, ref: string
       id: l.id, name: l.product_name, colour: l.colour, colour_hex: l.colour_hex, picture: l.picture, product_code: l.product_code, decoration_words: l.decoration_words, quantity: l.quantity,
       unit_cents: priced ? live.unit_cents : l.unit_cents, line_total_cents: priced ? live.line_total_cents : l.line_total_cents, setup_cents: priced ? live.setup_cents : l.setup_cents,
       price: priced ? "live" : frozen ? "frozen" : "none", staff: priced ? live.staff : null,
+      design: l.design, costing: lineCosting(priced ? live.staff : null, l.decoration, ticks[l.id], price?.price_version ?? null),
       state: l.state, state_word: DESK_WORDS[l.state], tone: LINE_TONE[l.state],
     };
   });
@@ -189,6 +193,7 @@ export async function builder(book: QuoteBook, nelson: NelsonConfig, ref: string
     changes: q.amendments.filter((a) => a.state === "waiting" || a.state === "suggested"), freight, freight_chosen: freight ? (price?.delivery?.service ?? freight.freight_options[0]?.service ?? null) : null,
     ship_to: `${q.client.address.city} ${q.client.address.postal_code}`,
     waiting, can_send: q.lines.length > 0 && q.state !== "accepted" && q.state !== "declined",
+    costing: { confirmed: lines.filter((l) => l.costing.state === "confirmed").length, total: lines.length },
     messages: q.messages, versions: q.versions.map((v) => ({ version: v.version, sent: day(v.sent_at) })), valid_until: q.valid_until,
   };
 }

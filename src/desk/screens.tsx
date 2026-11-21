@@ -12,7 +12,7 @@ import type { Board } from "./orders.ts";
 type Action = (form: FormData) => Promise<void>;
 type Said = { ok: boolean; text: string } | null;
 export type PipelineActions = { followUp: Action; rework: Action };
-export type BuilderActions = { answer: Action; send: Action; reply: Action };
+export type BuilderActions = { answer: Action; send: Action; reply: Action; confirm: Action };
 
 const TAB_WORDS: Record<PipelineTab, string> = { open: "Open", accepted: "Accepted", declined: "Declined", expired: "Expired" };
 const decimal = (n: number) => String(n).replace(".", ",");
@@ -116,30 +116,53 @@ export function BuilderScreen({ view, said, actions }: { view: Builder; said: Sa
         <div><Label>Waiting on</Label><b className={view.waiting.tone === "plain" ? "" : `tone-${view.waiting.tone}`} style={{ fontFamily: "inherit", fontSize: 15 }}>{view.waiting.words}</b></div>
       </section>
 
-      <details className="more">
-        <summary>Cost, supplier and stock</summary>
-        <div className="table-wrap">
-          <table className="lines">
-            <thead>
-              <tr><th>Line</th><th>Supplier</th><th className="num">Stock</th><th className="num">Cost</th><th className="num">Branding</th><th className="num">Mark-up</th><th className="num">Margin</th></tr>
-            </thead>
-            <tbody>
-              {view.lines.map((l) => (
-                <tr key={l.id}>
-                  <td><b>{l.name}</b><small className="mono">{l.product_code}</small><small>{l.decoration_words}</small></td>
-                  <td>{l.staff ? <>{l.staff.supplier}<small className="mono">{l.staff.supplier_code}</small></> : <span className="muted">—</span>}</td>
-                  <td className="num">{l.staff ? <><span className={stockTone(l.staff.stock, l.quantity)}>{count(l.staff.stock)}</span>{l.staff.incoming_stock[0] && <small>+{count(l.staff.incoming_stock[0].quantity)} · {day(l.staff.incoming_stock[0].due)}</small>}</> : "—"}</td>
-                  <td className="num">{rand(l.staff?.unit_cost_cents)}</td>
-                  <td className="num">{rand(l.staff?.branding_cost_cents)}</td>
-                  <td className="num" title="Nelson’s rule. Read-only on the Desk.">{l.staff ? `${decimal(l.staff.markup_applied_pct)}%` : "—"}</td>
-                  <td className="num">{l.staff ? <><span className="tone-ok">{rand(l.staff.margin_cents, { decimals: false })}</span><small>{decimal(l.staff.margin_pct)}%</small></> : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <section className="costing">
+        <header className="costing-head">
+          <Label>Costing check</Label>
+          <span className={`small ${view.costing.confirmed === view.costing.total ? "tone-ok" : "tone-warn"}`}>{view.costing.confirmed} of {view.costing.total} confirmed{view.costing.confirmed === view.costing.total ? "" : " · confirm every line before it is sent"}</span>
+        </header>
+        {view.lines.map((l) => (
+          <article key={l.id} className="cost-card">
+            <div className="cost-top">
+              <span className="swatch" style={{ background: l.colour_hex }} />
+              <div className="item-main">
+                <span className="item-title">{l.name}</span>
+                <span className="item-sub"><span className="mono">{l.product_code}</span> · {l.colour} · {count(l.quantity)}{l.design ? <> · artwork <span className="mono">{l.design.ref}</span> rev {l.design.rev}</> : ""}</span>
+              </div>
+              {l.costing.state === "no_cost" && <Chip tone="warn">No cost from Nelson yet</Chip>}
+              {l.costing.state === "confirmed" && <Chip tone="ok">Confirmed · {l.costing.tick!.by}, {day(l.costing.tick!.at)}</Chip>}
+              {(l.costing.state === "to_confirm" || l.costing.state === "moved") && (
+                <form action={actions.confirm}><Ref /><input type="hidden" name="line" value={l.id} /><button className="btn is-next">Confirm costing</button></form>
+              )}
+            </div>
+            {l.costing.state === "moved" && <p className="small tone-warn">The price version has moved since {l.costing.tick!.by} confirmed on {day(l.costing.tick!.at)}. Check it again.</p>}
+            {l.staff && (
+              <dl className="cost-rows">
+                <div>
+                  <dt>Product</dt><dd className="mono">{rand(l.staff.unit_cost_cents)} each</dd>
+                  <dd>{l.staff.supplier} · <span className="mono">{l.staff.supplier_code}</span>{l.staff.cost_as_of ? ` · read ${day(l.staff.cost_as_of)}` : ""}{l.staff.supplier_url && <> · <a href={l.staff.supplier_url} target="_blank" rel="noreferrer noopener">Open at source ↗</a></>}</dd>
+                </div>
+                {l.costing.costed.length === 0 && <div><dt>Print</dt><dd className="mono">{rand(l.staff.branding_cost_cents)} each</dd><dd>{l.decoration_words}</dd></div>}
+                {l.costing.costed.map((b, i) => <div key={i}><dt>Print</dt><dd className="mono">{rand(b.unit_cost_cents)} each</dd><dd>{b.words}</dd></div>)}
+                <div>
+                  <dt>Set-up</dt><dd className="mono">{l.staff.setup_cost_cents === undefined ? "—" : `${rand(l.staff.setup_cost_cents)} once`}</dd>
+                  <dd>{l.staff.setup_cost_cents === undefined ? "Nelson has not sent the set-up cost · " : ""}charged {rand(l.setup_cents)}</dd>
+                </div>
+                <div>
+                  <dt>Sell</dt><dd className="mono">{rand(l.unit_cents)} each</dd>
+                  <dd><span title="Nelson’s rule. Read-only on the Desk.">mark-up {decimal(l.staff.markup_applied_pct)}%</span> · margin <span className="tone-ok">{rand(l.staff.margin_cents, { decimals: false })} · {decimal(l.staff.margin_pct)}%</span></dd>
+                </div>
+                <div>
+                  <dt>Stock</dt><dd className={`mono ${stockTone(l.staff.stock, l.quantity)}`}>{count(l.staff.stock)}</dd>
+                  <dd>{l.staff.incoming_stock[0] ? `+${count(l.staff.incoming_stock[0].quantity)} due ${day(l.staff.incoming_stock[0].due)}` : "Nothing incoming"}</dd>
+                </div>
+              </dl>
+            )}
+            {l.costing.matches === false && <p className="small tone-bad">Costed for {l.costing.costed.map((b) => b.words).join(" + ") || "no branding"}. The quote asks for {l.costing.asked.join(" + ") || "no branding"}. Do not confirm until they match.</p>}
+          </article>
+        ))}
         <p className="small muted">Cost {rand(view.staff_totals?.cost_cents, { decimals: false })}{view.totals ? ` · setup ${rand(view.totals.setup_cents, { decimals: false })} · freight ${rand(view.totals.delivery_cents, { decimals: false })}` : ""}</p>
-      </details>
+      </section>
       <div className="cols">
         <div className="stack">
           <>

@@ -199,6 +199,67 @@
                   },
                   "margin_pct": {
                     "type": "number"
+                  },
+                  "setup_cost_cents": {
+                    "$ref": "common.json#/$defs/cents",
+                    "description": "Proposed (Desk card 26). What the set-up costs us, once per line. The sell side is the line setup_cents."
+                  },
+                  "cost_as_of": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Proposed. The day the cost was last read from its source."
+                  },
+                  "supplier_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Proposed. Where staff can open the product at its source and check the cost by eye."
+                  },
+                  "branding_costs": {
+                    "type": "array",
+                    "description": "Proposed. What was costed, one entry per decoration asked for. unit_cost_cents add up to branding_cost_cents; setup_cost_cents add up to the line setup_cost_cents.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "position": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "method": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "colours": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "width_mm": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "height_mm": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "stitches": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Embroidery only: the estimated stitch count the cost was read at."
+                        },
+                        "unit_cost_cents": {
+                          "$ref": "common.json#/$defs/cents"
+                        },
+                        "setup_cost_cents": {
+                          "$ref": "common.json#/$defs/cents"
+                        }
+                      },
+                      "required": [
+                        "position",
+                        "method",
+                        "unit_cost_cents",
+                        "setup_cost_cents"
+                      ],
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "required": [
