@@ -7,6 +7,13 @@ export function Chip({ tone = "plain", caps = false, children }: { tone?: Tone; 
   return <span className={`chip${tone === "plain" ? "" : ` is-${tone}`}${caps ? " is-caps" : ""}`}>{children}</span>;
 }
 
+// The picture leads. A real mockup when there is one; a colour swatch until then.
+export function Tile({ picture, colours, label, href }: { picture: string | null; colours: string[]; label: string; href?: string }) {
+  const inside = picture ? <img src={picture} alt={label} loading="lazy" /> : colours.map((hex, i) => <i key={i} style={{ background: hex }} />);
+  const cls = `tile${picture ? " has-picture" : ""}`;
+  return href ? <a className={cls} href={href} aria-hidden="true" tabIndex={-1}>{inside}</a> : <div className={cls}>{inside}</div>;
+}
+
 export const Label = ({ children }: { children: ReactNode }) => <div className="label">{children}</div>;
 
 export function Tabs({ tabs }: { tabs: { label: string; count: number; href: string; current: boolean }[] }) {

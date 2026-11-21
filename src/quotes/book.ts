@@ -16,6 +16,7 @@ export type BookLine = {
   product_name: string;
   colour: string;
   colour_hex: string;
+  picture: string | null; // the mockup, as an image source. Null until the customiser publishes one
   quantity: number;
   decoration: Decoration[];
   decoration_words: string; // "Front embroidery · 2 threads · 60 × 25 mm"

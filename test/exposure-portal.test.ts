@@ -335,7 +335,7 @@ describe("the quote screens a client can open", () => {
     expect(await portalQuote(book, "c_karoo", "Q-00013", undefined, NOW)).toBeNull(); // its own draft, still Nelson's
     expect(await portalQuotes(book, "c_karoo", "open", NOW)).toBeNull();
     const refs = (await Promise.all((["open", "accepted", "closed"] as const).map((t) => portalQuotes(book, MOCK_PORTAL_CLIENT_ID, t, NOW)))).flatMap((v) => v!.rows.map((r) => r.ref));
-    expect(refs.sort()).toEqual(["Q-00001", "Q-00002", "Q-00005", "Q-00007", "Q-00012"]);
+    expect(refs.sort()).toEqual(["Q-00001", "Q-00002", "Q-00005", "Q-00007", "Q-00012", "Q-00014"]);
   });
 
   test("the Portal's pages and actions check whose quote it is before anything else", () => {

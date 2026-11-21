@@ -2,7 +2,7 @@
 // spreadsheet. Simple rows, one next step, few words; the detail opens when it is asked for. Nothing here decides anything: what a client may do
 // arrives in the view, and every button posts to an action that asks the rules again.
 import type { ReactNode } from "react";
-import { Chip, MockBar, Notice, Tabs } from "../ui/bits.tsx";
+import { Chip, MockBar, Notice, Tabs, Tile } from "../ui/bits.tsx";
 import { day, dayTime, rand } from "../ui/format.ts";
 import type { QuoteDocument } from "../quotes/document.ts";
 import { QuoteSheet } from "../quotes/sheet.tsx";
@@ -33,7 +33,7 @@ export function QuotesScreen({ view, said, reopen }: { view: PortalQuotes; said:
         {view.rows.length === 0 && <p className="empty">Nothing here yet.</p>}
         {view.rows.map((row) => (
           <article key={row.ref} className="item has-tile">
-            <a className="tile" href={`/quotes/${row.ref}`} aria-hidden="true" tabIndex={-1}>{row.tiles.map((hex, i) => <i key={i} style={{ background: hex }} />)}</a>
+            <Tile picture={row.picture} colours={row.tiles} label={row.title} href={`/quotes/${row.ref}`} />
             <a className="item-main" href={`/quotes/${row.ref}`}>
               <span className="item-title">{row.title}</span>
               <span className="item-sub">{row.ref}</span>
@@ -79,7 +79,7 @@ export function QuoteScreen({ view, said, takeSuggestion, ask }: { view: PortalQ
       <section className="list">
         {view.lines.map((line) => (
           <article key={line.id} className="item is-line">
-            <div className="tile" title="Your mockup shows here once it is published"><i style={{ background: line.colour_hex }} /></div>
+            <Tile picture={line.picture} colours={[line.colour_hex]} label={line.name} />
             <div className="item-main">
               <span className="item-title">{line.name}</span>
               <span className="item-sub">{line.quantity} · {line.colour}</span>

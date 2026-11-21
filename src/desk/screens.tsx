@@ -1,7 +1,7 @@
 // The Desk's three quote screens, drawn from their views. Desk only: the builder shows supplier, cost, mark-up
 // and margin. Rendered on the server, never shipped as code.
 import type { ReactNode } from "react";
-import { Chip, Label, Notice, Tabs } from "../ui/bits.tsx";
+import { Chip, Label, Notice, Tabs, Tile } from "../ui/bits.tsx";
 import { count, day, dayTime, rand } from "../ui/format.ts";
 import type { QuoteDocument } from "../quotes/document.ts";
 import { QuoteSheet } from "../quotes/sheet.tsx";
@@ -97,7 +97,7 @@ export function BuilderScreen({ view, said, actions }: { view: Builder; said: Sa
       <section className="list">
         {view.lines.map((l) => (
           <article key={l.id} className="item is-line">
-            <div className="tile"><i style={{ background: l.colour_hex }} /></div>
+            <Tile picture={l.picture} colours={[l.colour_hex]} label={l.name} />
             <div className="item-main">
               <span className="item-title">{l.name}</span>
               <span className="item-sub">{count(l.quantity)} · {l.colour} · {rand(l.unit_cents)} each{l.price === "frozen" ? " · as sent" : ""}</span>

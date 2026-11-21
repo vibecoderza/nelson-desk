@@ -127,7 +127,7 @@ describe("the Desk's pipeline", () => {
 
   test("counts, win rate and why we lose come from the quotes themselves", async () => {
     const view = await pipeline(book, "declined", NOW);
-    expect(view.counts).toEqual({ open: 7, accepted: 2, declined: 1, expired: 1 });
+    expect(view.counts).toEqual({ open: 8, accepted: 2, declined: 1, expired: 1 });
     expect(view.month).toMatchObject({ won: 2, decided: 4, win_pct: 50 });
     expect(view.lost).toEqual([{ words: "No reply", count: 1 }, { words: "Too expensive", count: 1 }]);
     expect(view.flat.map((r) => r.ref)).toEqual(["Q-00008"]);
@@ -202,11 +202,26 @@ describe("the official quote", () => {
 describe("the Portal's quote screens", () => {
   test("the list is this client's sent quotes, by tab, with the one move each allows", async () => {
     const open = (await portalQuotes(book, MOCK_PORTAL_CLIENT_ID, "open", NOW))!;
-    expect(open.counts).toEqual({ open: 2, accepted: 2, closed: 1 });
-    expect(open.rows.map((r) => [r.ref, r.action.kind, r.chip.words])).toEqual([["Q-00012", "decide", "Ready to accept and pay"], ["Q-00007", "open", "1 change waiting on Nelson"]]);
+    expect(open.counts).toEqual({ open: 3, accepted: 2, closed: 1 });
+    expect(open.rows.map((r) => [r.ref, r.action.kind, r.chip.words])).toEqual([["Q-00014", "decide", "Ready to accept and pay"], ["Q-00012", "decide", "Ready to accept and pay"], ["Q-00007", "open", "1 change waiting on Nelson"]]);
     const closed = (await portalQuotes(book, MOCK_PORTAL_CLIENT_ID, "closed", NOW))!;
     expect(closed.rows.map((r) => [r.ref, r.action.kind])).toEqual([["Q-00001", "ask_again"]]);
     keep("portal-quotes", html(createElement(QuotesScreen, { view: open, said: null, reopen: noop })));
+  });
+
+  test("the real case: the Mother Moon Collection, twelve pieces, each with its mockup and its sent price", async () => {
+    const view = (await portalQuote(book, MOCK_PORTAL_CLIENT_ID, "Q-00014", undefined, NOW))!;
+    expect(view.lines).toHaveLength(12);
+    expect(view.lines.every((l) => l.picture?.startsWith("data:image/jpeg;base64,"))).toBe(true);
+    expect(view.lines.map((l) => l.unit_cents)).toEqual([7000, 13500, 13000, 12500, 14000, 16000, 17500, 14000, 9000, 14500, 17000, 46000]);
+    expect(view.totals).toMatchObject({ setup_cents: 0, delivery_cents: 0, total_cents: 4_850_000 });
+    expect(view.totals.total_cents).toBe(view.lines.reduce((sum, l) => sum + l.line_total_cents!, 0));
+    const page = html(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop }));
+    expect(page.match(/<img /g)).toHaveLength(12);
+    keep("portal-collection", page);
+    const desk = (await builder(book, nelsonStaffConfig({}), "Q-00014", NOW))!;
+    expect(desk.lines.every((l) => l.price === "frozen" && l.staff === null)).toBe(true); // no cost is invented for a real product
+    keep("desk-collection", html(createElement(BuilderScreen, { view: desk, said: null, actions })));
   });
 
   test("the quote shows live line states on the newest version and a frozen copy of an older one", async () => {

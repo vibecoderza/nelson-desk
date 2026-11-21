@@ -18,6 +18,7 @@ const TAB_OF: Record<Exclude<QuoteState, "draft">, PortalTab> = { working: "open
 export type PortalRow = {
   ref: string; state_word: string; tone: Tone; title: string; changed: string; version: number; total_cents: number;
   tiles: string[]; // one colour per product, until the customiser publishes mockups
+  picture: string | null; // the first mockup on the quote, when there is one
   chip: { tone: Tone; words: string };
   action: { kind: "open" | "decide" | "ask_again" | "reopen" | "order"; label: string };
 };
@@ -40,7 +41,7 @@ function row(q: BookQuote, now: Date): PortalRow {
     expired: { changed: `No answer · closed ${day(q.decided_at)}`, chip: { tone: "plain", words: "Expired" }, action: { kind: "ask_again", label: "Ask again" } },
   };
   const state = q.state as Exclude<QuoteState, "draft">;
-  return { ref: q.ref, state_word: STATE_WORDS[state], tone: STATE_TONE[state], title: q.title, version: v.version, total_cents: v.totals.total_cents, tiles: q.lines.slice(0, 3).map((l) => l.colour_hex), ...by[state] };
+  return { ref: q.ref, state_word: STATE_WORDS[state], tone: STATE_TONE[state], title: q.title, version: v.version, total_cents: v.totals.total_cents, tiles: q.lines.slice(0, 3).map((l) => l.colour_hex), picture: q.lines.find((l) => l.picture)?.picture ?? null, ...by[state] };
 }
 
 export async function portalQuotes(book: QuoteBook, clientId: string, tab: PortalTab, now: Date): Promise<PortalQuotes | null> {
@@ -55,7 +56,7 @@ export async function portalQuotes(book: QuoteBook, clientId: string, tab: Porta
 }
 
 export type PortalLine = {
-  id: string; name: string; colour: string; colour_hex: string; decoration_words: string; quantity: number;
+  id: string; name: string; colour: string; colour_hex: string; picture: string | null; decoration_words: string; quantity: number;
   breaks: { quantity: number; chosen: boolean }[]; unit_cents: number | null; line_total_cents: number | null;
   state: LineState; state_word: string; tone: Tone; note: string; suggestion: string | null;
 };
@@ -88,7 +89,7 @@ export async function portalQuote(book: QuoteBook, clientId: string, ref: string
     lines: lines.map((l) => {
       const chosen = chosenBreak(l.ladder, l.quantity);
       return {
-        id: l.id, name: l.product_name, colour: l.colour, colour_hex: l.colour_hex, decoration_words: l.decoration_words, quantity: l.quantity,
+        id: l.id, name: l.product_name, colour: l.colour, colour_hex: l.colour_hex, picture: l.picture, decoration_words: l.decoration_words, quantity: l.quantity,
         breaks: l.ladder.map((b) => ({ quantity: b.min_quantity, chosen: b.min_quantity === chosen })), unit_cents: l.unit_cents, line_total_cents: l.line_total_cents,
         state: l.state, state_word: l.state === "waiting_on_supplier" ? `${PORTAL_WORDS[l.state]} ${day(l.due_date)}` : PORTAL_WORDS[l.state], tone: LINE_TONE[l.state], note: l.note, suggestion: suggestionFor(l),
       };

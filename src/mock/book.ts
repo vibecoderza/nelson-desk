@@ -1,12 +1,14 @@
-// The stand-in quote book: eleven quotes that cover every state, group and chip the six quote screens draw.
+// The stand-in quote book: twelve quotes that cover every state, group and chip the six quote screens draw.
 // It stands where the database will. Every date is counted back from "now", so the follow-up clock keeps telling
 // the same story on any day. Q-00007's prices are the contract's price fixture itself; the other amounts are
-// frozen answers of the same kind. All figures are illustrative.
+// frozen answers of the same kind. All figures are illustrative, except Q-00014: that one is the real
+// Mother Moon Collection as Nelson sent it in November 2026, with its own products, mockups and prices.
 import price from "../../contract/fixtures/price-response.customer.json";
 import request from "../../contract/fixtures/price-request.json";
 import type { LineState } from "../domain/line.ts";
 import type { Address, Decoration, PriceTotals } from "../nelson/client.ts";
 import type { BookClient, BookLine, BookQuote, BookVersion, QuoteBook } from "../quotes/book.ts";
+import { MOTHER_MOON_PICTURES as PIC } from "./mother-moon-pictures.ts";
 
 const DAY = 86_400_000;
 const PRICE_VERSION = price.price_version;
@@ -26,8 +28,8 @@ const CLIENTS = {
 };
 export const MOCK_PORTAL_CLIENT_ID = CLIENTS.moon.id;
 
-type LineIn = Omit<BookLine, "position" | "design" | "due_date" | "ladder" | "decoration" | "state" | "note"> & Partial<Pick<BookLine, "design" | "due_date" | "ladder" | "decoration" | "state" | "note">>;
-const line = (position: number, l: LineIn): BookLine => ({ position, design: null, due_date: null, ladder: [], decoration: [], state: "agreed", note: "Priced and agreed.", ...l });
+type LineIn = Omit<BookLine, "position" | "design" | "due_date" | "ladder" | "decoration" | "state" | "note" | "picture"> & Partial<Pick<BookLine, "design" | "due_date" | "ladder" | "decoration" | "state" | "note" | "picture">>;
+const line = (position: number, l: LineIn): BookLine => ({ position, picture: null, design: null, due_date: null, ladder: [], decoration: [], state: "agreed", note: "Priced and agreed.", ...l });
 const totals = (lines_cents: number, setup_cents: number, delivery_cents: number, total_cents: number): PriceTotals => ({ lines_cents, setup_cents, delivery_cents, total_cents });
 
 export function mockQuotes(now: Date): BookQuote[] {
@@ -146,7 +148,38 @@ export function mockQuotes(now: Date): BookQuote[] {
     waiting_words: "Waiting on artwork",
   };
 
-  return [yearEnd, aprons, shopper, mugs, hoodies, openers, lagomCaps, fynbos, folders, scrubCaps, gin];
+  // Q-00014. A real case: the Mother Moon Collection, as sent (the document itself is numbered Q-00007, which the
+  // fixture quote above already holds). Twelve pieces, each with its mockup. Every price is the sent, all-inclusive
+  // price per unit: branding, set-up and delivery to Cape Town are in it, so set-up and delivery read nil.
+  // The quantities are a starting pick of 25 each; the client moves them.
+  const piece = (n: number, id: string, product_code: string, product_name: string, colour: string, colour_hex: string, picture: string, decoration_words: string, rands: [number, number, number], at: [number, number, number] = [25, 50, 100], quantity = 25): BookLine => {
+    const ladder = at.map((min_quantity, i) => ({ min_quantity, unit_cents: rands[i]! * 100 }));
+    const unit_cents = ladder.find((b) => b.min_quantity === quantity)!.unit_cents;
+    return line(n, { id, product_code, product_name, colour, colour_hex, picture, quantity, decoration_words, unit_cents, setup_cents: 0, line_total_cents: unit_cents * quantity, ladder });
+  };
+  const moonLines: BookLine[] = [
+    piece(1, "ql_mm01", "NEL-BAG-SHP", "The Everyday Shopper", "Natural", "#e6dcc6", PIC.shopper, "Screen print · 1 colour · front", [70, 60, 50]),
+    piece(2, "ql_mm02", "NEL-BAG-CAN", "The Canvas Carry-All", "Stone", "#b8ab95", PIC.carry_all, "Screen print · 1 colour · front", [135, 125, 120]),
+    piece(3, "ql_mm03", "NEL-BAG-BCH", "The Beach Tote", "Natural", "#ece4d2", PIC.beach_tote, "Screen print · 1 colour · front · from February 2027", [130, 120, 115]),
+    piece(4, "ql_mm04", "NEL-BAG-JUT", "The Jute Market Tote", "Natural jute", "#b9945c", PIC.jute_tote, "Screen print · 1 colour · pocket", [125, 115, 110]),
+    piece(5, "ql_mm05", "NEL-MUG-BAM", "The Bamboo-Lid Mug", "White and bamboo", "#f4f2ee", PIC.bamboo_mug, "Full-colour wrap print", [140, 130, 125]),
+    piece(6, "ql_mm06", "NEL-MUG-CRK", "The Cork-Base Mug", "White and cork", "#efe9df", PIC.cork_mug, "Full-colour wrap print", [160, 150, 140]),
+    piece(7, "ql_mm07", "NEL-CUP-GLS", "The Glass & Bamboo Cup", "Clear and bamboo", "#d9c39a", PIC.glass_cup, "Laser engraved bamboo lid", [175, 160, 155]),
+    piece(8, "ql_mm08", "NEL-TUM-COP", "The Copper Tumbler", "Burnt orange", "#a8502f", PIC.copper_tumbler, "Laser engraving", [140, 130, 120]),
+    piece(9, "ql_mm09", "NEL-BOT-GLS", "The Glass Bottle", "Clear and bamboo", "#dfe7e4", PIC.glass_bottle, "Wrap print · 1 colour", [90, 85, 80]),
+    piece(10, "ql_mm10", "NEL-BOT-ALU", "The Terracotta Bottle", "Burnt orange", "#b86a52", PIC.terracotta_bottle, "Screen print wrap · 1 colour", [145, 135, 130]),
+    piece(11, "ql_mm11", "NEL-CAP-DAD", "The Washed Dad Cap", "Rust", "#a85a47", PIC.dad_cap, "Front embroidery", [195, 170, 160], [10, 25, 100]),
+    piece(12, "ql_mm12", "NEL-SET-RIT", "The Daily Ritual Set", "Burnt orange and bamboo", "#b86a52", PIC.ritual_set, "Bottle, cup and tumbler, each branded", [460, 425, 405]),
+  ];
+  const moonSum = moonLines.reduce((sum, l) => sum + l.line_total_cents!, 0);
+  const moonV1: BookVersion = { version: 1, sent_at: ago(2, 13), price_version: PRICE_VERSION, totals: totals(moonSum, 0, 0, moonSum), delivery_words: "Included · Cape Town", lines: moonLines, change_log: ["First quote"] };
+  const collection: BookQuote = {
+    ...base, ref: "Q-00014", client: CLIENTS.moon, title: "The Mother Moon Collection", summary: "Eleven pieces and one set, branded and delivered", state: "final", version: 1,
+    asked_at: ago(6, 10), first_sent_at: moonV1.sent_at, last_sent_at: moonV1.sent_at, valid_until: ahead(9), seen: { opened_at: ago(1, 18), times_opened: 2, video_at: null },
+    versions: [moonV1], lines: moonLines,
+  };
+
+  return [collection, yearEnd, aprons, shopper, mugs, hoodies, openers, lagomCaps, fynbos, folders, scrubCaps, gin];
 }
 
 export const MOCK_LINE_STATES: readonly LineState[] = ["agreed", "waiting_on_nelson", "nelson_suggests"];
