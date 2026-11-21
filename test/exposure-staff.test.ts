@@ -7,7 +7,7 @@ import { describe, expect, test } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { decide, DEV_HOSTS, MACHINE_ROUTES, PUBLIC_PAGES, responseHeaders, surfaceForHost, type Decision, type Session } from "@/surface/access.ts";
-import { clerkKeys, clientRoleFromOrgRole, hostsFromEnv, sessionFrom, staffEmailsFromEnv } from "@/surface/clerk.ts";
+import { clerkKeys, clientRoleFromOrgRole, hostsFromEnv, secondFactorRequiredFromEnv, sessionFrom, staffEmailsFromEnv } from "@/surface/clerk.ts";
 import { sign, verify } from "@/events/signing.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -144,6 +144,27 @@ describe("who may open the Desk", () => {
     expect(decide("desk", "/api/quotes", client, STAFF)).toEqual({ action: "refuse", reason: "not_on_the_staff_list" });
   });
 
+  test("the second factor can be skipped only while the Desk has no database, and only by the exact switch", () => {
+    const noFactor = { ...staff, secondFactorVerified: false };
+    // decide() requires it unless told otherwise.
+    expect(decide("desk", "/", noFactor, STAFF)).toEqual({ action: "refuse", reason: "second_factor_required" });
+    expect(decide("desk", "/", noFactor, STAFF, false)).toEqual({ action: "page", rewriteTo: "/desk" });
+    // Skipping it never skips the allow-list or the delegated-session refusal.
+    expect(decide("desk", "/", { ...noFactor, email: "someone@example.test" }, STAFF, false)).toEqual({ action: "refuse", reason: "not_on_the_staff_list" });
+    expect(decide("desk", "/", { ...client }, STAFF, false)).toEqual({ action: "refuse", reason: "not_on_the_staff_list" });
+    expect(decide("desk", "/", { ...noFactor, actingForSomeoneElse: true }, STAFF, false)).toEqual({ action: "refuse", reason: "delegated_session" });
+
+    expect(secondFactorRequiredFromEnv({})).toBe(true);
+    expect(secondFactorRequiredFromEnv({ DESK_SECOND_FACTOR: "off" })).toBe(false);
+    for (const v of ["OFF", "false", "0", "no", " off", ""]) expect(secondFactorRequiredFromEnv({ DESK_SECOND_FACTOR: v }), v).toBe(true);
+    // The moment real data is wired, the switch stops working.
+    expect(secondFactorRequiredFromEnv({ DESK_SECOND_FACTOR: "off", DATABASE_URL: "set" })).toBe(true);
+    expect(secondFactorRequiredFromEnv({ DESK_SECOND_FACTOR: "off", DATABASE_URL_PORTAL: "set" })).toBe(true);
+
+    const src = readFileSync(path.join(ROOT, "proxy.ts"), "utf8");
+    expect(src).toMatch(/staffEmailsFromEnv\(\), secondFactorRequiredFromEnv\(\)\)/);
+  });
+
   test("a session acting for someone else is refused on both surfaces until agent sessions are restricted", () => {
     expect(decide("desk", "/", { ...staff, actingForSomeoneElse: true }, STAFF)).toEqual({ action: "refuse", reason: "delegated_session" });
     expect(decide("desk", "/api/quotes", { ...staff, actingForSomeoneElse: true }, STAFF)).toEqual({ action: "refuse", reason: "delegated_session" });
@@ -178,9 +199,13 @@ describe("who may open the Desk", () => {
 
 describe("two applications, two sessions", () => {
   test("each surface reads its own keys and never the other's", () => {
-    const env = { CLERK_DESK_PUBLISHABLE_KEY: "desk-pub", CLERK_DESK_SECRET_KEY: "desk-sec", CLERK_PORTAL_PUBLISHABLE_KEY: "portal-pub", CLERK_PORTAL_SECRET_KEY: "portal-sec" };
-    expect(clerkKeys("desk", env)).toEqual({ publishableKey: "desk-pub", secretKey: "desk-sec" });
-    expect(clerkKeys("portal", env)).toEqual({ publishableKey: "portal-pub", secretKey: "portal-sec" });
+    const env = { CLERK_DESK_PUBLISHABLE_KEY: "pk_test_desk", CLERK_DESK_SECRET_KEY: "sk_test_desk", CLERK_PORTAL_PUBLISHABLE_KEY: "pk_test_portal", CLERK_PORTAL_SECRET_KEY: "sk_test_portal" };
+    expect(clerkKeys("desk", env)).toEqual({ publishableKey: "pk_test_desk", secretKey: "sk_test_desk" });
+    expect(clerkKeys("portal", env)).toEqual({ publishableKey: "pk_test_portal", secretKey: "sk_test_portal" });
+    // A malformed or swapped pair is no pair: 503, never Clerk throwing a 500 on every request.
+    expect(clerkKeys("portal", { CLERK_PORTAL_PUBLISHABLE_KEY: '"pk_test_portal"', CLERK_PORTAL_SECRET_KEY: "sk_test_portal" })).toBeNull();
+    expect(clerkKeys("portal", { CLERK_PORTAL_PUBLISHABLE_KEY: "sk_test_portal", CLERK_PORTAL_SECRET_KEY: "pk_test_portal" })).toBeNull();
+    expect(clerkKeys("portal", { CLERK_PORTAL_PUBLISHABLE_KEY: " pk_test_portal", CLERK_PORTAL_SECRET_KEY: "sk_test_portal" })).toBeNull();
     // Half a pair, the other surface's pair, or Clerk's default names: no keys, so no sign-in.
     expect(clerkKeys("desk", { CLERK_DESK_PUBLISHABLE_KEY: "x" })).toBeNull();
     expect(clerkKeys("desk", { CLERK_PORTAL_PUBLISHABLE_KEY: "x", CLERK_PORTAL_SECRET_KEY: "y" })).toBeNull();

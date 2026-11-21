@@ -50,7 +50,9 @@ export type Decision =
 
 const under = (path: string, base: string) => path === base || path.startsWith(base + "/");
 
-export function decide(surface: Surface, pathname: string, session: Session, staffEmails: readonly string[]): Decision {
+// secondFactorRequired defaults to true. Only secondFactorRequiredFromEnv may turn it off, and only while the Desk
+// has no database to show.
+export function decide(surface: Surface, pathname: string, session: Session, staffEmails: readonly string[], secondFactorRequired = true): Decision {
   // The internal trees are never addressable from outside: /desk/... on the portal host is not a way in.
   if (under(pathname, "/desk") || under(pathname, "/portal")) return { action: "not_found" };
 
@@ -60,23 +62,23 @@ export function decide(surface: Surface, pathname: string, session: Session, sta
     const other: Surface = surface === "desk" ? "portal" : "desk";
     if (pathname in MACHINE_ROUTES[other]) return { action: "not_found" };
     if (!session) return { action: "not_found" };
-    const refused = sessionRule(surface, session, staffEmails);
+    const refused = sessionRule(surface, session, staffEmails, secondFactorRequired);
     return refused ?? { action: "page", rewriteTo: pathname };
   }
 
   const rewriteTo = `/${surface}${pathname === "/" ? "" : pathname}`;
   if (PUBLIC_PAGES[surface].some((p) => under(pathname, p))) return { action: "page", rewriteTo };
   if (!session) return { action: "sign_in" };
-  return sessionRule(surface, session, staffEmails) ?? { action: "page", rewriteTo };
+  return sessionRule(surface, session, staffEmails, secondFactorRequired) ?? { action: "page", rewriteTo };
 }
 
-function sessionRule(surface: Surface, session: NonNullable<Session>, staffEmails: readonly string[]): Decision | null {
+function sessionRule(surface: Surface, session: NonNullable<Session>, staffEmails: readonly string[], secondFactorRequired: boolean): Decision | null {
   if (session.actingForSomeoneElse) return { action: "refuse", reason: "delegated_session" };
   if (surface === "desk") {
     // Staff sign in from an allow-list and with a second factor, because the Desk shows cost (brief 7.6).
     const email = session.email?.trim().toLowerCase();
     if (!email || !staffEmails.map((e) => e.trim().toLowerCase()).filter(Boolean).includes(email)) return { action: "refuse", reason: "not_on_the_staff_list" };
-    if (!session.secondFactorVerified) return { action: "refuse", reason: "second_factor_required" };
+    if (secondFactorRequired && !session.secondFactorVerified) return { action: "refuse", reason: "second_factor_required" };
   }
   return null;
 }

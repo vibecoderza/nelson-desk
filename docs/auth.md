@@ -43,6 +43,7 @@ Do not set Clerk's default names (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SE
 - `proxy.ts` places every request on a surface by its host, then asks `src/surface/access.ts` whether it passes. Default deny.
 - The Clerk keys are picked per request by surface (`src/surface/clerk.ts`). No keys for a surface: 503, and no stand-in application is made (keyless mode is off).
 - Desk rule: on the staff list, second factor verified in this session, not a delegated session. Otherwise 403.
+- Second factor, for now (Alan, 21 Nov 2026): multi-factor is a paid Clerk feature, so the Desk runs on the allow-list alone until it holds real data. `DESK_SECOND_FACTOR=off` skips the factor only while `DATABASE_URL` and `DATABASE_URL_PORTAL` are both unset. Setting either one puts the factor back, whatever the switch says. Before the Neon card: upgrade the Desk Clerk app, turn on an authenticator, delete the switch.
 - Portal rule: signed in and not a delegated session. The client role comes from the organisation role. An unknown role is no role.
 - Machine routes carry their own credential and belong to one host: the Nelson webhook (signature), the outbox cron (bearer), health.
 
