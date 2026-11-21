@@ -15,7 +15,7 @@ export const OrderRow = ({ row, place }: { row: BoardRow; place: Action }) => (
   <article className="item">
     <a className="item-main" href={`/orders/${row.ref}`}>
       <span className="item-title">{row.client}</span>
-      <span className="item-sub">{row.ref} · {row.what}</span>
+      <span className="item-sub">{row.what ? `${row.ref} · ${row.what}` : row.ref}</span>
     </a>
     <Chip tone={row.chip.tone}>{row.chip.words}</Chip>
     <span className={`item-total${row.late ? " tone-bad" : ""}`}>{row.target}</span>
@@ -84,7 +84,7 @@ export function DeskOrderScreen({ view, said, actions }: { view: DeskOrder; said
     <div className="page is-calm is-wide">
       <header className="head">
         <a className="crumb" href="/orders">← Orders</a>
-        <h1>{view.client.name} <span>· {view.title}</span></h1>
+        <h1><a href={`/clients/${view.client.id}`}>{view.client.name}</a> <span>· {view.title}</span></h1>
         <Chip tone={view.chip.tone}>{view.chip.words}</Chip>
       </header>
       <Notice notice={said} />

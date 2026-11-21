@@ -36,7 +36,7 @@ const Row = ({ row, actions }: { row: PipelineRow; actions: PipelineActions }) =
   <article className="item">
     <a className="item-main" href={`/quotes/${row.ref}`}>
       <span className="item-title">{row.client}</span>
-      <span className="item-sub">{row.ref} · {row.what}</span>
+      <span className="item-sub">{row.what ? `${row.ref} · ${row.what}` : row.ref}</span>
     </a>
     <Chip tone={row.chip.tone}>{row.chip.words}</Chip>
     <span className="item-total">{rand(row.total_cents, { decimals: false })}</span>
@@ -44,7 +44,7 @@ const Row = ({ row, actions }: { row: PipelineRow; actions: PipelineActions }) =
   </article>
 );
 
-const Group = ({ title, rows, actions }: { title: string; rows: PipelineRow[]; actions: PipelineActions }) => (
+export const Group = ({ title, rows, actions }: { title: string; rows: PipelineRow[]; actions: PipelineActions }) => (
   <section className="group">
     <h2 className="group-title">{title}</h2>
     {rows.length === 0 ? <p className="empty">Clear.</p> : <div className="list">{rows.map((row) => <Row key={row.ref} row={row} actions={actions} />)}</div>}
@@ -87,7 +87,7 @@ export function BuilderScreen({ view, said, actions }: { view: Builder; said: Sa
     <div className="page">
       <header className="head">
         <a className="crumb" href="/quotes">← Quotes</a>
-        <h1>{view.client.name} <span>· {view.title}</span></h1>
+        <h1><a href={`/clients/${view.client.id}`}>{view.client.name}</a> <span>· {view.title}</span></h1>
         <Chip tone={stateTone} caps>{view.version ? `v${view.version} · ` : ""}{view.state_word}</Chip>
         <div className="head-end">
           {view.version > 0 && <a className="btn" href={`/quotes/${view.ref}/pdf`}>PDF</a>}

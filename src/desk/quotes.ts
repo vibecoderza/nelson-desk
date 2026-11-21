@@ -40,7 +40,7 @@ function seenWords(q: BookQuote, now: Date): string {
   return q.follow_ups_sent.includes("video_ask") || q.seen.times_opened === 2 ? `${times} · video ${q.seen.video_at ? "watched" : "not watched"}` : times;
 }
 
-function pipelineRow(q: BookQuote, now: Date): PipelineRow {
+export function pipelineRow(q: BookQuote, now: Date): PipelineRow {
   const v = latestVersion(q);
   const s = QUOTE_SETTINGS.followUps;
   const base = { ref: q.ref, client: q.client.name, what: `${q.title}${v ? ` · v${v.version}` : " · draft"}`, total_cents: v?.totals.total_cents ?? null, seen: seenWords(q, now), order_ref: q.order_ref };
@@ -121,7 +121,7 @@ export type BuilderLine = {
   staff: StaffLine | null; state: LineState; state_word: string; tone: Tone;
 };
 export type Builder = {
-  ref: string; client: { name: string; contact: string; phone_tail: string }; title: string; state: QuoteState; state_word: string; version: number; next_version: number;
+  ref: string; client: { id: string; name: string; contact: string; phone_tail: string }; title: string; state: QuoteState; state_word: string; version: number; next_version: number;
   lines: BuilderLine[]; totals: PriceTotals | null; staff_totals: StaffPrice["staff"] | null; price_version: string | null; nelson: { ok: boolean; words: string };
   changes: BookAmendment[]; freight: DeliveryEstimate | null; freight_chosen: string | null; ship_to: string;
   waiting: { tone: Tone; words: string }; can_send: boolean;
@@ -182,7 +182,7 @@ export async function builder(book: QuoteBook, nelson: NelsonConfig, ref: string
     : { tone: "ok", words: "Nobody · ready to accept" };
 
   return {
-    ref: q.ref, client: { name: q.client.name, contact: q.client.contact_name, phone_tail: q.client.phone_tail }, title: q.title, state: q.state, state_word: STATE_WORDS[q.state],
+    ref: q.ref, client: { id: q.client.id, name: q.client.name, contact: q.client.contact_name, phone_tail: q.client.phone_tail }, title: q.title, state: q.state, state_word: STATE_WORDS[q.state],
     version: q.version, next_version: q.version + 1, lines,
     totals: allLive ? price!.totals : sent?.totals ?? null, staff_totals: allLive ? price!.staff : null, price_version: price?.price_version ?? sent?.price_version ?? null,
     nelson: { ok: allLive, words: said },

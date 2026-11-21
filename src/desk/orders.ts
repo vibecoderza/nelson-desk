@@ -31,7 +31,7 @@ export function moveOf(o: FiledOrder, now: Date): Move {
 
 const agoWord = (n: number) => (n <= 0 ? "today" : n === 1 ? "yesterday" : `${n} days ago`);
 
-function boardRow(o: FiledOrder, now: Date): BoardRow {
+export function boardRow(o: FiledOrder, now: Date): BoardRow {
   const move = moveOf(o, now);
   const target = targetDate(o, now);
   const late = !isDone(o) && o.proof.signed !== null && target !== null && daysBetween(now, target) < 0;
@@ -68,7 +68,7 @@ export async function board(file: OrderFile, tab: BoardTab, now: Date): Promise<
 }
 
 export type DeskOrder = {
-  ref: string; client: { name: string; contact: string }; title: string; state: OrderState; state_word: string; chip: { tone: Tone; words: string }; steps: Step[];
+  ref: string; client: { id: string; name: string; contact: string }; title: string; state: OrderState; state_word: string; chip: { tone: Tone; words: string }; steps: Step[];
   move: Move; target: string; late: boolean; hold: { reason: string; since: string } | null; total_cents: number; paid: string; quote_ref: string | null;
   lines: { id: string; name: string; colour: string; colour_hex: string; picture: string | null; quantity: number; decoration_words: string }[];
   proof: { ref: string; round: number; sheet_picture: string | null; arrived: string | null; sent: string | null; signed: string | null };
@@ -82,7 +82,7 @@ export async function deskOrder(file: OrderFile, ref: string, now: Date): Promis
   if (!o) return null;
   const row = boardRow(o, now);
   return {
-    ref: o.ref, client: { name: o.client.name, contact: o.client.contact_name }, title: o.title, state: o.state, state_word: DESK_WORDS[o.state], chip: row.chip, steps: o.state === "cancelled" ? [] : steps(o.state),
+    ref: o.ref, client: { id: o.client.id, name: o.client.name, contact: o.client.contact_name }, title: o.title, state: o.state, state_word: DESK_WORDS[o.state], chip: row.chip, steps: o.state === "cancelled" ? [] : steps(o.state),
     move: row.move, target: row.target, late: row.late, hold: o.hold ? { reason: o.hold.reason, since: day(o.hold.since) } : null, total_cents: o.total_cents, paid: day(o.paid_at), quote_ref: o.quote_ref,
     lines: o.lines.map((l) => ({ id: l.id, name: l.product_name, colour: l.colour, colour_hex: l.colour_hex, picture: l.picture, quantity: l.quantity, decoration_words: l.decoration_words })),
     proof: { ref: o.proof.ref, round: o.proof.round, sheet_picture: o.proof.sheet_picture, arrived: o.proof.arrived_at && day(o.proof.arrived_at), sent: o.proof.sent_at && day(o.proof.sent_at), signed: o.proof.signed && `${o.proof.signed.name}, ${day(o.proof.signed.at)}` },

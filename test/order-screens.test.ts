@@ -154,3 +154,21 @@ describe("the Portal's home, orders and proof", () => {
     keep("portal-proof-signed", html(createElement(ProofScreen, { view: signed, said: null, sign: noop, askChange: noop })));
   });
 });
+
+describe("the Desk's clients", () => {
+  test("every client is one row, and the page holds all of theirs: orders, quotes, conversations", async () => {
+    const { clients, clientPage } = await import("@/desk/clients.ts");
+    const { ClientScreen, ClientsScreen } = await import("@/desk/client-screens.tsx");
+    const list = await clients(quotes, file);
+    expect(list.rows.length).toBe(7);
+    expect(list.rows[0]).toMatchObject({ id: MOCK_PORTAL_CLIENT_ID, open_quotes: 3, open_orders: 2, paid_cents: 2_300_000 });
+    keep("desk-clients", html(createElement(ClientsScreen, { view: list })));
+    const view = (await clientPage(quotes, file, MOCK_PORTAL_CLIENT_ID, NOW))!;
+    expect(view.orders.map((r) => r.ref)).toEqual(["N-1035", "N-1028", "N-1019"]);
+    expect(view.quotes.length).toBe(6);
+    expect(view).toMatchObject({ orders_count: 3, average_order_cents: 766_667, won: 2, decided: 3 });
+    expect(view.messages.length).toBe(4);
+    keep("desk-client", html(createElement(ClientScreen, { view, said: null, actions: { followUp: noop, rework: noop, place: noop } })));
+    for (const id of ["c_nobody", "../etc", ""]) expect(await clientPage(quotes, file, id, NOW)).toBeNull();
+  });
+});

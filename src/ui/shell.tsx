@@ -23,7 +23,7 @@ function Rail({ items }: { items: NavItem[] }) {
   );
 }
 
-export type DeskPlace = "today" | "quotes" | "orders";
+export type DeskPlace = "today" | "quotes" | "orders" | "clients";
 export type PortalPlace = "home" | "quotes" | "orders";
 
 export function DeskShell({ current, openQuotes, openOrders, children }: { current: DeskPlace; openQuotes: number; openOrders: number; children: ReactNode }) {
@@ -31,6 +31,7 @@ export function DeskShell({ current, openQuotes, openOrders, children }: { curre
     { label: "Today", href: "/", current: current === "today" },
     { label: "Quotes", href: "/quotes", count: openQuotes, current: current === "quotes" },
     { label: "Orders", href: "/orders", count: openOrders, current: current === "orders" },
+    { label: "Clients", href: "/clients", current: current === "clients" },
   ];
   return (
     <div className="app">
