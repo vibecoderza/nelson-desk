@@ -8,6 +8,8 @@ import path from "node:path";
 import type { Server } from "node:http";
 import { fixture } from "@/contract/load.ts";
 import { builder, pipeline } from "@/desk/quotes.ts";
+import { board } from "@/desk/orders.ts";
+import { mockOrders } from "@/mock/orders.ts";
 import { nelsonStaffConfig } from "@/desk/mock-nelson-staff.ts";
 import { priceForStaff, type StaffPrice } from "@/desk/nelson-staff.ts";
 import { BuilderScreen, DeskDocumentScreen, PipelineScreen, TodayScreen } from "@/desk/screens.tsx";
@@ -132,7 +134,7 @@ describe("the Desk's pipeline", () => {
     expect(view.lost).toEqual([{ words: "No reply", count: 1 }, { words: "Too expensive", count: 1 }]);
     expect(view.flat.map((r) => r.ref)).toEqual(["Q-00008"]);
     keep("desk-pipeline", html(createElement(PipelineScreen, { view: await pipeline(book, "open", NOW), said: null, actions })));
-    keep("desk-today", html(createElement(TodayScreen, { view: await pipeline(book, "open", NOW), said: null, actions })));
+    keep("desk-today", html(createElement(TodayScreen, { view: await pipeline(book, "open", NOW), orders: await board(mockOrders(() => NOW), "open", NOW), said: null, actions: { ...actions, place: noop } })));
   });
 });
 

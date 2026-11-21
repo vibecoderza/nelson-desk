@@ -18,7 +18,7 @@ export type PipelineTab = "open" | "accepted" | "declined" | "expired";
 export type PipelineGroup = "overdue" | "due" | "working" | "decided";
 export type PipelineAction = { kind: "open" | "send_check_in" | "send_video_ask" | "last_ask" | "rework" | "order"; label: string; next: boolean };
 export type PipelineRow = {
-  ref: string; client: string; what: string; total_cents: number | null; seen: string; group: PipelineGroup; tone: Tone;
+  ref: string; client: string; what: string; total_cents: number | null; seen: string; order_ref: string | null; group: PipelineGroup; tone: Tone;
   chip: { tone: Tone; words: string }; action: PipelineAction;
 };
 export type Pipeline = {
@@ -43,7 +43,7 @@ function seenWords(q: BookQuote, now: Date): string {
 function pipelineRow(q: BookQuote, now: Date): PipelineRow {
   const v = latestVersion(q);
   const s = QUOTE_SETTINGS.followUps;
-  const base = { ref: q.ref, client: q.client.name, what: `${q.title}${v ? ` · v${v.version}` : " · draft"}`, total_cents: v?.totals.total_cents ?? null, seen: seenWords(q, now) };
+  const base = { ref: q.ref, client: q.client.name, what: `${q.title}${v ? ` · v${v.version}` : " · draft"}`, total_cents: v?.totals.total_cents ?? null, seen: seenWords(q, now), order_ref: q.order_ref };
   const open: PipelineAction = { kind: "open", label: "Open", next: false };
 
   if (q.state === "accepted") return { ...base, group: "decided", tone: "ok", chip: { tone: "ok", words: `Accepted → ${q.order_ref}` }, action: { kind: "order", label: "Order", next: false } };

@@ -14,6 +14,13 @@ export function Tile({ picture, colours, label, href }: { picture: string | null
   return href ? <a className={cls} href={href} aria-hidden="true" tabIndex={-1}>{inside}</a> : <div className={cls}>{inside}</div>;
 }
 
+// Where an order is, in the six steps a client follows.
+export const Steps = ({ steps }: { steps: { words: string; at: "done" | "now" | "next" }[] }) => steps.length === 0 ? null : (
+  <ol className="steps" aria-label="Progress">
+    {steps.map((s) => <li key={s.words} className={`is-${s.at}`} aria-current={s.at === "now" ? "step" : undefined}>{s.words}</li>)}
+  </ol>
+);
+
 export const Label = ({ children }: { children: ReactNode }) => <div className="label">{children}</div>;
 
 export function Tabs({ tabs }: { tabs: { label: string; count: number; href: string; current: boolean }[] }) {

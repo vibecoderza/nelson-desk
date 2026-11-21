@@ -16,7 +16,7 @@ function RowAction({ row, reopen }: { row: PortalRow; reopen: Action }) {
   const { kind, label } = row.action;
   if (kind === "open") return <a className="btn" href={`/quotes/${row.ref}`}>{label}</a>;
   if (kind === "decide") return <a className="btn is-next" href={`/quotes/${row.ref}/decide`}>{label}</a>;
-  if (kind === "order") return <a className="btn" href={`/quotes/${row.ref}`}>View</a>;
+  if (kind === "order") return <a className="btn" href={row.order_ref ? `/orders/${row.order_ref}` : `/quotes/${row.ref}`}>View order</a>;
   return <form action={reopen}><input type="hidden" name="ref" value={row.ref} /><button className="btn">{label}</button></form>;
 }
 
@@ -82,7 +82,7 @@ export function QuoteScreen({ view, said, takeSuggestion, ask, askForPick }: { v
               <button className="btn is-big is-next">Ask Nelson for this</button>
               <a className="small" href={base}>Back to the quote as sent</a>
             </form>
-          ) : view.order_ref ? <span className="small">Paid. This is now order {view.order_ref}.</span>
+          ) : view.order_ref ? <a className="btn is-big" href={`/orders/${view.order_ref}`}>View order {view.order_ref}</a>
             : view.can.acceptAndPay ? <a className="btn is-big is-next" href={`${base}/decide`}>Accept and pay</a>
             : view.can.decline ? <><span className="btn is-big is-off">Accept and pay</span><span className="small tone-warn">{waiting}</span></>
             : <span className="small muted">This quote is {view.state_word.toLowerCase()}.</span>}

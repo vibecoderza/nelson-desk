@@ -14,7 +14,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
   const view = await portalQuotes(quoteBook(), portalClientId(), TABS.find((t) => t === params.tab) ?? "open", new Date());
   if (!view) notFound();
   return (
-    <PortalFrame current="quotes" clientName={view.client_name} openQuotes={view.counts.open}>
+    <PortalFrame current="quotes" clientName={view.client_name}>
       <QuotesScreen view={view} said={readNotice(params)} reopen={reopenQuote} />
     </PortalFrame>
   );

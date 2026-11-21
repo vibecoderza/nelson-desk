@@ -17,7 +17,7 @@ const addr = (line1: string, city: string, province: string, postal_code: string
 const client = (id: string, name: string, contact_name: string, contact_email: string, phone_tail: string, address: Address): BookClient =>
   ({ id, name, contact_name, contact_email, phone_tail, address, address_words: `${address.line1}, ${address.city} ${address.postal_code}` });
 
-const CLIENTS = {
+export const CLIENTS = {
   moon: client("c_mothermoon", "Mother Moon Herbals", "Holly Daniels", "holly@mothermoon.example", "4410", request.delivery_address as Address),
   brewing: client("c_capepoint", "Cape Point Brewing", "Sipho Ndlovu", "sipho@capepoint.example", "2207", addr("3 Lighthouse Road", "Cape Town", "Western Cape", "7975")),
   lagom: client("c_lagom", "Lagom Studio", "Astrid Berg", "astrid@lagom.example", "9031", addr("88 Bree Street", "Cape Town", "Western Cape", "8001")),

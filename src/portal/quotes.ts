@@ -16,7 +16,7 @@ export type PortalTab = "open" | "accepted" | "closed";
 const TAB_OF: Record<Exclude<QuoteState, "draft">, PortalTab> = { working: "open", final: "open", accepted: "accepted", declined: "closed", expired: "closed" };
 
 export type PortalRow = {
-  ref: string; state_word: string; tone: Tone; title: string; changed: string; version: number; total_cents: number;
+  ref: string; state_word: string; tone: Tone; title: string; changed: string; version: number; total_cents: number; order_ref: string | null;
   tiles: string[]; // one colour per product, until the customiser publishes mockups
   picture: string | null; // the first mockup on the quote, when there is one
   chip: { tone: Tone; words: string };
@@ -41,7 +41,7 @@ function row(q: BookQuote, now: Date): PortalRow {
     expired: { changed: `No answer · closed ${day(q.decided_at)}`, chip: { tone: "plain", words: "Expired" }, action: { kind: "ask_again", label: "Ask again" } },
   };
   const state = q.state as Exclude<QuoteState, "draft">;
-  return { ref: q.ref, state_word: STATE_WORDS[state], tone: STATE_TONE[state], title: q.title, version: v.version, total_cents: v.totals.total_cents, tiles: q.lines.slice(0, 3).map((l) => l.colour_hex), picture: q.lines.find((l) => l.picture)?.picture ?? null, ...by[state] };
+  return { ref: q.ref, state_word: STATE_WORDS[state], tone: STATE_TONE[state], title: q.title, version: v.version, total_cents: v.totals.total_cents, order_ref: q.order_ref, tiles: q.lines.slice(0, 3).map((l) => l.colour_hex), picture: q.lines.find((l) => l.picture)?.picture ?? null, ...by[state] };
 }
 
 export async function portalQuotes(book: QuoteBook, clientId: string, tab: PortalTab, now: Date): Promise<PortalQuotes | null> {

@@ -6,6 +6,8 @@ import { count, day, dayTime, rand } from "../ui/format.ts";
 import type { QuoteDocument } from "../quotes/document.ts";
 import { QuoteSheet } from "../quotes/sheet.tsx";
 import type { Builder, Pipeline, PipelineRow, PipelineTab } from "./quotes.ts";
+import { OrderGroup } from "./order-screens.tsx";
+import type { Board } from "./orders.ts";
 
 type Action = (form: FormData) => Promise<void>;
 type Said = { ok: boolean; text: string } | null;
@@ -18,7 +20,7 @@ const decimal = (n: number) => String(n).replace(".", ",");
 function RowAction({ row, actions }: { row: PipelineRow; actions: PipelineActions }) {
   const { kind, label, next } = row.action;
   if (kind === "open") return <a className="btn" href={`/quotes/${row.ref}`}>{label}</a>;
-  if (kind === "order") return <a className="btn" href={`/quotes/${row.ref}`}>Open</a>;
+  if (kind === "order") return <a className="btn" href={row.order_ref ? `/orders/${row.order_ref}` : `/quotes/${row.ref}`}>Order</a>;
   const follow = kind === "send_check_in" ? "check_in" : kind === "send_video_ask" ? "video_ask" : kind === "last_ask" ? "last_ask" : null;
   return (
     <form action={follow ? actions.followUp : actions.rework}>
@@ -225,8 +227,8 @@ export function DeskDocumentScreen({ doc, printButton }: { doc: QuoteDocument; p
   );
 }
 
-// Today: two headers and the rows under them. Nothing else earns a place here yet.
-export function TodayScreen({ view, said, actions }: { view: Pipeline; said: Said; actions: PipelineActions }) {
+// Today: what needs Alan, orders first because they are paid for, then quotes, then who to chase. Headers and rows.
+export function TodayScreen({ view, orders, said, actions }: { view: Pipeline; orders: Board; said: Said; actions: PipelineActions & { place: Action } }) {
   const rows = view.groups.flatMap((g) => g.rows);
   const needsYou = rows.filter((r) => r.group === "working" && r.tone === "warn");
   const chase = rows.filter((r) => r.group === "overdue" || r.group === "due");
@@ -234,7 +236,8 @@ export function TodayScreen({ view, said, actions }: { view: Pipeline; said: Sai
     <div className="page is-calm is-wide">
       <header className="head"><h1>Today</h1></header>
       <Notice notice={said} />
-      <Group title="Needs you" rows={needsYou} actions={actions} />
+      <OrderGroup title="Orders to move" rows={orders.groups.find((g) => g.key === "needs_you")?.rows ?? []} place={actions.place} />
+      <Group title="Quotes to answer" rows={needsYou} actions={actions} />
       <Group title="Chase" rows={chase} actions={actions} />
     </div>
   );

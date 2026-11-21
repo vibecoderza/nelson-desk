@@ -11,7 +11,7 @@ export default async function DecidePage({ params, searchParams }: { params: Pro
   const view = await portalDecide(quoteBook(), portalClientId(), (await params).ref);
   if (!view) notFound();
   return (
-    <PortalFrame current="quotes" clientName={view.client_name} openQuotes={view.open_count}>
+    <PortalFrame current="quotes" clientName={view.client_name}>
       <DecideScreen view={view} said={readNotice(await searchParams)} accept={acceptQuote} decline={declineQuote} />
     </PortalFrame>
   );

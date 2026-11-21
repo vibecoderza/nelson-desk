@@ -29,6 +29,11 @@ import { quoteDocument } from "@/quotes/document.ts";
 import { builder } from "@/desk/quotes.ts";
 import { nelsonStaffConfig } from "@/desk/mock-nelson-staff.ts";
 import { BuilderScreen } from "@/desk/screens.tsx";
+import { deskOrder } from "@/desk/orders.ts";
+import { DeskOrderScreen } from "@/desk/order-screens.tsx";
+import { mockOrderList, mockOrders } from "@/mock/orders.ts";
+import { portalHome, portalOrder, portalOrders, portalProof } from "@/portal/orders.ts";
+import { HomeScreen, OrderScreen, OrdersScreen, ProofScreen } from "@/portal/order-screens.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const STAFF_TABLES = ["quote_line_staff", "quote_version_staff", "order_line_staff", "supplier", "costing_request", "costing_answer", "outbox", "webhook_inbox", "agent", "agent_log", "audit_log", "staff_user", "setting", "client_note", "brief", "enquiry", "follow_up", "template", "client_source"];
@@ -361,5 +366,80 @@ describe("the quote screens a client can open", () => {
     const client = [...walk("src"), ...walk("app")].filter((f) => /^\s*["']use client["']/.test(readFileSync(path.join(ROOT, f), "utf8")));
     expect(client).toEqual([path.join("src", "ui", "print-button.tsx")]);
     expect(readFileSync(path.join(ROOT, client[0]!), "utf8")).not.toMatch(/import /);
+  });
+});
+
+describe("the order and proof screens a client can open", () => {
+  const NOW = new Date("2026-11-21T11:00:00Z");
+  const file = mockOrders(() => NOW);
+  const quotes = mockBook(() => NOW);
+  const noop = async () => {};
+  const STAFF_WORDS = /\b(margin|mark-?up|supplier|stock|cost|costs|costing|print house)\b/i;
+  const clean = (what: string, view: unknown, page: string) => {
+    expect(leaksIn(view), what).toEqual([]);
+    expect(leaksInText(page), what).toEqual([]);
+    expect(page.match(STAFF_WORDS)?.[0] ?? null, what).toBeNull();
+  };
+
+  test("the stand-in order file holds the customer view only", () => {
+    expect(leaksIn(mockOrderList(NOW))).toEqual([]);
+  });
+
+  test("home, both order lists, every order and every proof are clean for every client, as data and as HTML", async () => {
+    let pages = 0;
+    for (const order of mockOrderList(NOW)) {
+      const client = order.client.id;
+      const home = (await portalHome(quotes, file, client, NOW))!;
+      clean(`${client} home`, home, renderToStaticMarkup(createElement(HomeScreen, { view: home, said: null })));
+      for (const tab of ["open", "done"] as const) {
+        const view = (await portalOrders(file, client, tab, NOW))!;
+        clean(`${client} orders ${tab}`, view, renderToStaticMarkup(createElement(OrdersScreen, { view, said: null })));
+      }
+      const view = (await portalOrder(file, client, order.ref, NOW))!;
+      clean(order.ref, view, renderToStaticMarkup(createElement(OrderScreen, { view, said: null, ask: noop })));
+      const proof = await portalProof(file, client, order.ref, "owner", NOW);
+      if (proof) clean(`${order.ref} proof`, proof, renderToStaticMarkup(createElement(ProofScreen, { view: proof, said: null, sign: noop, askChange: noop })));
+      pages += proof ? 2 : 1;
+    }
+    expect(pages).toBeGreaterThan(12);
+  });
+
+  test("the check is live: the Desk's order page, drawn the same way, trips every part of it", async () => {
+    const view = (await deskOrder(file, "N-1031", NOW))!;
+    const page = renderToStaticMarkup(createElement(DeskOrderScreen, { view, said: null, actions: { approve: noop, sendBack: noop, place: noop, waybill: noop, delivered: noop, hold: noop, release: noop } }));
+    expect(leaksIn(view).map((l) => l.kind).sort()).toEqual(expect.arrayContaining(["private_key", "supplier_name", "supplier_ref"]));
+    expect(leaksInText(page).map((l) => l.kind)).toEqual(expect.arrayContaining(["supplier_name", "supplier_ref"]));
+    expect(page).toMatch(STAFF_WORDS);
+  });
+
+  test("a client reaches their own orders and nothing else, and a proof only once Nelson has sent it", async () => {
+    // N-1031 belongs to another client; N-9999 does not exist. Both look the same.
+    for (const ref of ["N-1031", "N-9999"]) {
+      expect(await portalOrder(file, MOCK_PORTAL_CLIENT_ID, ref, NOW), ref).toBeNull();
+      expect(await portalProof(file, MOCK_PORTAL_CLIENT_ID, ref, "owner", NOW), ref).toBeNull();
+    }
+    expect(await portalProof(file, "c_lagom", "N-1036", "owner", NOW)).toBeNull(); // their own, still with Nelson
+    expect(await portalProof(file, "c_capepoint", "N-1038", "owner", NOW)).toBeNull(); // no sheet yet
+    expect(await portalOrders(file, "c_nobody", "open", NOW)).toBeNull();
+    const refs = (await Promise.all((["open", "done"] as const).map((t) => portalOrders(file, MOCK_PORTAL_CLIENT_ID, t, NOW)))).flatMap((v) => v!.rows.map((r) => r.ref));
+    expect(refs.sort()).toEqual(["N-1019", "N-1028", "N-1035"]);
+  });
+
+  test("the Portal's order pages and actions check whose order it is before anything else", () => {
+    const read = (f: string) => readFileSync(path.join(ROOT, f), "utf8");
+    const actions = read("src/portal/order-actions.ts");
+    expect(actions).toMatch(/order && order\.client\.id === portalClientId\(\) \? order : null/);
+    const exported = [...actions.matchAll(/export async function (\w+)\(form: FormData\): Promise<void> \{\n\s+const o = await ownOrder\(form\);/g)].map((m) => m[1]);
+    expect(exported.sort()).toEqual([...actions.matchAll(/export (?:async function|const) (\w+)/g)].map((m) => m[1]).sort());
+    expect(exported).toEqual(expect.arrayContaining(["signProof", "askForProofChange", "askOnOrder"]));
+    // Every view the pages read refuses another client's order itself.
+    const views = read("src/portal/orders.ts");
+    expect(views.match(/o\.client\.id !== clientId/g)!.length).toBe(2);
+    expect(views.match(/assertPortalSafe\(/g)!.length).toBe(4);
+    // The supply side of an order is named under src/desk only.
+    const walk = (dir: string): string[] => readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []);
+    const naming = [...walk("src"), ...walk("app")].filter((f) => /order-supply|supplyFor/.test(readFileSync(path.join(ROOT, f), "utf8")));
+    expect(naming.length).toBeGreaterThan(0);
+    expect(naming.filter((f) => !f.startsWith(path.join("src", "desk")))).toEqual([]);
   });
 });

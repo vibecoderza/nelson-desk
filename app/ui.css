@@ -311,3 +311,29 @@ table.items td small { display: block; font-size: 12px; color: var(--ink-3); }
   .sheet { box-shadow: none; padding: 0; max-width: none; min-height: 250mm; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Orders: the six steps, the proof sheet, the four ticks. */
+.steps { list-style: none; margin: 0; padding: 0 2px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; font-size: 12px; color: var(--ink-3); }
+.steps li { display: grid; gap: 6px; line-height: 1.25; }
+.steps li::before { content: ""; height: 4px; border-radius: 2px; background: var(--line-2); }
+.steps .is-done { color: var(--ink-2); }
+.steps .is-done::before { background: var(--ink); }
+.steps .is-now { color: var(--ink); font-weight: 600; }
+.steps .is-now::before { background: var(--accent); }
+.proof-sheet { overflow: hidden; }
+.proof-sheet img { display: block; width: 100%; max-height: 520px; object-fit: contain; background: var(--well, #f4f2ee); }
+.more > .proof-sheet { padding: 0 var(--s5) var(--s3); }
+.more > .proof-sheet img { border-radius: var(--r-ctl); max-height: 360px; }
+.ticks { display: grid; gap: 0; }
+.ticks label { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) 0; border-top: 1px solid var(--line); cursor: pointer; font-size: 15px; }
+.ticks label:first-child { border-top: 0; padding-top: 0; }
+.ticks input { width: 20px; height: 20px; accent-color: var(--ink); flex: none; }
+.field.is-signature { font-family: "Snell Roundhand", "Segoe Script", "Brush Script MT", cursive; font-size: 22px; padding-top: 10px; padding-bottom: 10px; }
+.inline-more summary { cursor: pointer; font-size: 13px; color: var(--ink-2); list-style: none; }
+.inline-more summary::-webkit-details-marker { display: none; }
+.inline-more[open] summary { margin-bottom: var(--s2); }
+.hero-do .field { text-align: left; }
+@media (max-width: 860px) {
+  .steps { font-size: 10.5px; gap: 4px; }
+  .steps li:not(.is-now) { font-size: 0; }
+}

@@ -23,10 +23,14 @@ function Rail({ items }: { items: NavItem[] }) {
   );
 }
 
-export function DeskShell({ current, openQuotes, children }: { current: "today" | "quotes"; openQuotes: number; children: ReactNode }) {
+export type DeskPlace = "today" | "quotes" | "orders";
+export type PortalPlace = "home" | "quotes" | "orders";
+
+export function DeskShell({ current, openQuotes, openOrders, children }: { current: DeskPlace; openQuotes: number; openOrders: number; children: ReactNode }) {
   const items: NavItem[] = [
     { label: "Today", href: "/", current: current === "today" },
     { label: "Quotes", href: "/quotes", count: openQuotes, current: current === "quotes" },
+    { label: "Orders", href: "/orders", count: openOrders, current: current === "orders" },
   ];
   return (
     <div className="app">
@@ -40,10 +44,11 @@ export function DeskShell({ current, openQuotes, children }: { current: "today" 
   );
 }
 
-export function PortalShell({ current, clientName, openQuotes, contact, children }: { current: "home" | "quotes"; clientName: string; openQuotes: number; contact: string; children: ReactNode }) {
+export function PortalShell({ current, clientName, openQuotes, openOrders, contact, children }: { current: PortalPlace; clientName: string; openQuotes: number; openOrders: number; contact: string; children: ReactNode }) {
   const items: NavItem[] = [
     { label: "Home", href: "/", current: current === "home" },
     { label: "Quotes", href: "/quotes", count: openQuotes, current: current === "quotes" },
+    { label: "Orders", href: "/orders", count: openOrders, current: current === "orders" },
   ];
   return (
     <div className="app">

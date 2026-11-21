@@ -13,7 +13,7 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
   const view = await portalQuote(quoteBook(), portalClientId(), (await params).ref, Number.isInteger(wanted) && wanted > 0 ? wanted : undefined, new Date(), parsePick(typeof query.pick === "string" ? query.pick : undefined));
   if (!view) notFound();
   return (
-    <PortalFrame current="quotes" clientName={view.client_name} openQuotes={view.open_count}>
+    <PortalFrame current="quotes" clientName={view.client_name}>
       <QuoteScreen view={view} said={readNotice(query)} takeSuggestion={takeSuggestion} ask={askOnQuote} askForPick={askForPick} />
     </PortalFrame>
   );
