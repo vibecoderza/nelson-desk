@@ -35,7 +35,8 @@ import { mockOrderList, mockOrders } from "@/mock/orders.ts";
 import { portalHome, portalOrder, portalOrders, portalProof } from "@/portal/orders.ts";
 import { HomeScreen, OrderScreen, OrdersScreen, ProofScreen } from "@/portal/order-screens.tsx";
 import { mockArtwork, mockBrand, mockKits } from "@/mock/brand.ts";
-import { portalArtwork, portalBrandKit } from "@/portal/brand.ts";
+import { readSite } from "@/brand/read-site.ts";
+import { portalArtwork, portalBrandKit, portalSiteKit } from "@/portal/brand.ts";
 import { ArtworkScreen, BrandKitScreen } from "@/portal/brand-screens.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -451,23 +452,31 @@ describe("the brand kit and artwork a client can open", () => {
   const file = mockBrand();
   const noop = async () => {};
   const STAFF_WORDS = /\b(margin|mark-?up|supplier|stock|stocks|cost|costs|costing|print house)\b/i;
+  const kitPage = (view: Awaited<ReturnType<typeof portalBrandKit>>) => renderToStaticMarkup(createElement(BrandKitScreen, { view, said: null, confirm: noop, readSite: noop }));
+  const artPage = (view: Awaited<ReturnType<typeof portalArtwork>>) => renderToStaticMarkup(createElement(ArtworkScreen, { view, said: null, redraw: noop, makeMain: noop }));
+  const clean = (what: string, view: unknown, page: string) => {
+    expect(leaksIn(view), what).toEqual([]);
+    expect(leaksInText(page), what).toEqual([]);
+    expect(page.match(STAFF_WORDS)?.[0] ?? null, what).toBeNull();
+  };
 
   test("the stand-in brand file holds the customer view only", () => {
     expect(leaksIn(mockKits())).toEqual([]);
     expect(leaksIn(mockArtwork())).toEqual([]);
   });
 
-  test("the brand kit and the artwork are clean for every client, as data and as HTML", async () => {
+  test("the brand kit, a kit read from a website and the artwork are clean for every client, as data and as HTML", async () => {
     for (const client of ["c_mothermoon", "c_lagom", "c_nobody"]) {
       const kit = await portalBrandKit(file, client, "A client", true);
-      const art = await portalArtwork(file, client, "A client");
-      const pages = [renderToStaticMarkup(createElement(BrandKitScreen, { view: kit, said: null, confirm: noop })), renderToStaticMarkup(createElement(ArtworkScreen, { view: art, said: null, redraw: noop }))];
-      for (const [i, view] of [kit, art].entries()) {
-        expect(leaksIn(view), client).toEqual([]);
-        expect(leaksInText(pages[i]!), client).toEqual([]);
-        expect(pages[i]!.match(STAFF_WORDS)?.[0] ?? null, client).toBeNull();
+      clean(`${client} kit`, kit, kitPage(kit));
+      for (const tag of ["all", "logo", "pattern"] as const) {
+        const art = await portalArtwork(file, client, "A client", tag);
+        clean(`${client} artwork ${tag}`, art, artPage(art));
       }
     }
+    const read = readSite('<title>Shop | Brand</title><meta name="description" content="Tea."><style>a{color:#4B5D43;font-family:Karla,sans-serif}</style>', [], "https://brand.co.za/");
+    const draft = portalSiteKit("brand.co.za", read, [], "A client");
+    clean("a kit read from a website", draft, kitPage(draft));
   });
 
   test("a client sees their own kit and files and nothing else", async () => {
@@ -486,12 +495,32 @@ describe("the brand kit and artwork a client can open", () => {
 
   test("the brand actions find the thing among the client's own before anything else", () => {
     const actions = readFileSync(path.join(ROOT, "src/portal/brand-actions.ts"), "utf8");
-    const exported = [...actions.matchAll(/export async function (\w+)\(form: FormData\): Promise<void> \{\n\s+const \w+ = await own(?:Artwork|KitItem)\(form\);/g)].map((m) => m[1]);
-    expect(exported.sort()).toEqual(["askForRedraw", "confirmKitItem"]);
-    expect([...actions.matchAll(/export (?:async function|const) (\w+)/g)].map((m) => m[1]).sort()).toEqual(exported);
+    const owned = [...actions.matchAll(/export async function (\w+)\(form: FormData\): Promise<void> \{\n\s+const \w+ = await own(?:Artwork|KitItem)\(form\);/g)].map((m) => m[1]);
+    expect(owned.sort()).toEqual(["askForRedraw", "confirmKitItem", "makeMainLogo"]);
+    // The one action that touches nothing on file only checks an address and opens a page.
+    expect([...actions.matchAll(/export (?:async function|const) (\w+)/g)].map((m) => m[1]).sort()).toEqual([...owned, "readWebsite"].sort());
+    expect(actions).toMatch(/export async function readWebsite\(form: FormData\): Promise<void> \{\n\s+const host = siteHost\(text\(form, "site"\)\);\n\s+if \(!host\) return back\([^\n]+\n\s+return redirect\(`\/brand\?site=\$\{encodeURIComponent\(host\)\}`\);\n\}/);
     expect(actions.match(/portalClientId\(\)/g)!.length).toBeGreaterThanOrEqual(4);
     const views = readFileSync(path.join(ROOT, "src/portal/brand.ts"), "utf8");
     expect(views.match(/client\.id [!=]== clientId/g)!.length).toBe(2);
-    expect(views.match(/assertPortalSafe\(/g)!.length).toBe(3);
+    expect(views.match(/assertPortalSafe\(/g)!.length).toBe(4);
+  });
+
+  test("the website reader only ever asks a public https host, and sends nothing of ours", async () => {
+    const { siteHost } = await import("@/brand/read-site.ts");
+    for (const bad of ["localhost", "127.0.0.1", "10.0.0.5", "169.254.169.254", "[::1]", "desk.internal", "nelson.local", "a b.com", "user:pw@site.com", "site.com:8080", "", "x", "http://", "file:///etc/passwd", "metadata.google.internal"]) expect(siteHost(bad), bad).toBeNull();
+    expect(siteHost(" https://www.MotherMoon.co.za/shop?x=1 ")).toBe("www.mothermoon.co.za");
+    const { fetchSite } = await import("@/brand/fetch-site.ts");
+    expect(await fetchSite("169.254.169.254")).toEqual({ ok: false, code: "bad_address" });
+    const src = readFileSync(path.join(ROOT, "src/brand/fetch-site.ts"), "utf8");
+    // One fetch, never following a redirect on its own, on a clock, with no cookie, key or body of ours.
+    expect(src.match(/\bfetch\(/g)!.length).toBe(1);
+    expect(src).toMatch(/redirect: "manual"/);
+    expect(src).toMatch(/AbortSignal\.timeout\(/);
+    expect(src).toMatch(/u\.protocol !== "https:" \|\| u\.port \|\| u\.username \|\| !\(await publicHost\(u\.hostname\)\)/);
+    expect(src).not.toMatch(/process\.env|authorization|cookie|method:|body:/i);
+    // Only the Portal's brand page reads a website.
+    const walk = (dir: string): string[] => readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []);
+    expect([...walk("src"), ...walk("app")].filter((f) => /fetchSite\(/.test(readFileSync(path.join(ROOT, f), "utf8"))).sort()).toEqual([path.join("app", "portal", "brand", "page.tsx"), path.join("src", "brand", "fetch-site.ts")]);
   });
 });

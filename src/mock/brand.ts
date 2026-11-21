@@ -10,6 +10,7 @@ export function mockKits(): BrandKit[] {
   return [
     {
       id: "bk_moon", client: who(CLIENTS.moon), read_from: "Brand guide (PDF)", read_at: at("2026-11-04T09:10:00Z"),
+      summary: { words: "Herbal teas and rituals, made by hand. Calm, earthy and warm; natural textures, soft colour, nothing loud.", sure: false },
       colours: [
         { id: "bc_moon_1", name: "Moss", hex: "#4B5D43", thread: "Deep moss green", sure: true },
         { id: "bc_moon_2", name: "Clay", hex: "#B5694A", thread: "Burnt terracotta", sure: true },
@@ -27,7 +28,7 @@ export function mockKits(): BrandKit[] {
       ],
     },
     {
-      id: "bk_lagom", client: who(CLIENTS.lagom), read_from: "Website", read_at: at("2026-11-12T14:00:00Z"),
+      id: "bk_lagom", client: who(CLIENTS.lagom), read_from: "Website", read_at: at("2026-11-12T14:00:00Z"), summary: null,
       colours: [{ id: "bc_lagom_1", name: "Ink", hex: "#111111", thread: "Black", sure: true }, { id: "bc_lagom_2", name: "Paper", hex: "#F5F2EC", thread: "Off white", sure: false }],
       fonts: [{ id: "bf_lagom_1", name: "Inter", use: "Everything", sure: false }],
       rules: [],
@@ -38,11 +39,11 @@ export function mockKits(): BrandKit[] {
 export function mockArtwork(): ArtworkFile[] {
   const moon = who(CLIENTS.moon);
   return [
-    { id: "af_moon_1", client: moon, name: "mother-moon-logo.svg", from: "client", added_at: at("2026-11-04T09:05:00Z"), check: { kind: "vector", sharp_to_mm: null, colours: 1, verdict: "ready" }, tiles: ["#4B5D43"], redraw_of: null },
-    { id: "af_moon_2", client: moon, name: "moon-botanical-stamp.png", from: "client", added_at: at("2026-11-10T16:40:00Z"), check: { kind: "pixels", sharp_to_mm: 45, colours: 3, verdict: "needs_redraw" }, tiles: ["#B5694A", "#EADFCB"], redraw_of: null },
-    { id: "af_moon_3", client: moon, name: "ritual-wordmark.jpg", from: "client", added_at: at("2026-10-28T08:20:00Z"), check: { kind: "pixels", sharp_to_mm: 30, colours: 2, verdict: "needs_redraw" }, tiles: ["#23262B"], redraw_of: null },
-    { id: "af_moon_4", client: moon, name: "ritual-wordmark-redrawn.svg", from: "nelson", added_at: at("2026-10-30T11:00:00Z"), check: { kind: "vector", sharp_to_mm: null, colours: 1, verdict: "ready" }, tiles: ["#23262B"], redraw_of: "af_moon_3" },
-    { id: "af_lagom_1", client: who(CLIENTS.lagom), name: "lagom-mark.svg", from: "client", added_at: at("2026-11-12T14:05:00Z"), check: { kind: "vector", sharp_to_mm: null, colours: 1, verdict: "ready" }, tiles: ["#111111"], redraw_of: null },
+    { id: "af_moon_1", tag: "logo", main: true, client: moon, name: "mother-moon-logo.svg", from: "client", added_at: at("2026-11-04T09:05:00Z"), check: { kind: "vector", sharp_to_mm: null, colours: 1, verdict: "ready" }, tiles: ["#4B5D43"], redraw_of: null },
+    { id: "af_moon_2", tag: "pattern", main: false, client: moon, name: "moon-botanical-stamp.png", from: "client", added_at: at("2026-11-10T16:40:00Z"), check: { kind: "pixels", sharp_to_mm: 45, colours: 3, verdict: "needs_redraw" }, tiles: ["#B5694A", "#EADFCB"], redraw_of: null },
+    { id: "af_moon_3", tag: "logo", main: false, client: moon, name: "ritual-wordmark.jpg", from: "client", added_at: at("2026-10-28T08:20:00Z"), check: { kind: "pixels", sharp_to_mm: 30, colours: 2, verdict: "needs_redraw" }, tiles: ["#23262B"], redraw_of: null },
+    { id: "af_moon_4", tag: "logo", main: false, client: moon, name: "ritual-wordmark-redrawn.svg", from: "nelson", added_at: at("2026-10-30T11:00:00Z"), check: { kind: "vector", sharp_to_mm: null, colours: 1, verdict: "ready" }, tiles: ["#23262B"], redraw_of: "af_moon_3" },
+    { id: "af_lagom_1", tag: "logo", main: true, client: who(CLIENTS.lagom), name: "lagom-mark.svg", from: "client", added_at: at("2026-11-12T14:05:00Z"), check: { kind: "vector", sharp_to_mm: null, colours: 1, verdict: "ready" }, tiles: ["#111111"], redraw_of: null },
   ];
 }
 

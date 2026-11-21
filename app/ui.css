@@ -365,3 +365,8 @@ select.field { appearance: auto; min-width: 0; }
 .more summary::after { margin-left: var(--s3); }
 .more summary > span:first-child { flex: 1; }
 @media (max-width: 860px) { .facts.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ask-site { display: grid; grid-template-columns: 1fr auto; gap: var(--s2); margin-bottom: var(--s4); }
+.brand-words { font-size: 15px; line-height: 1.5; color: var(--ink); }
+.logo-row { display: flex; flex-wrap: wrap; gap: var(--s3); }
+.logo-row img { height: 72px; max-width: 220px; object-fit: contain; padding: var(--s3); background: var(--card, #fff); border: 1px solid var(--line); border-radius: 12px; }
+@media (max-width: 560px) { .ask-site { grid-template-columns: 1fr; } }

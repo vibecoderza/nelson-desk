@@ -212,20 +212,48 @@ describe("the Desk's back office", () => {
 });
 
 describe("the Portal's brand kit and artwork", () => {
-  test("guesses are counted, a redrawn file stops asking, and Nelson's redraws sit apart", async () => {
+  test("guesses are counted, a redrawn file stops asking, the main logo leads and tags filter", async () => {
     const { mockBrand } = await import("@/mock/brand.ts");
     const { portalArtwork, portalBrandKit } = await import("@/portal/brand.ts");
     const { ArtworkScreen, BrandKitScreen } = await import("@/portal/brand-screens.tsx");
     const kit = await portalBrandKit(mockBrand(), MOCK_PORTAL_CLIENT_ID, "Mother Moon Herbals", true);
-    expect(kit).toMatchObject({ guesses: 3, read: "Read from your brand guide (PDF) on 4 Nov" });
+    expect(kit).toMatchObject({ guesses: 4, draft: false, read: "Read from your brand guide (PDF) on 4 Nov" });
     expect(kit.colours[0]).toMatchObject({ title: "Moss", sub: "#4B5D43 · nearest thread: Deep moss green" });
-    const page = html(createElement(BrandKitScreen, { view: kit, said: null, confirm: noop }));
-    expect(page.match(/Guess · confirm/g)!.length).toBe(3);
-    expect(html(createElement(BrandKitScreen, { view: { ...kit, may_confirm: false }, said: null, confirm: noop }))).not.toMatch(/>Confirm</);
+    const page = html(createElement(BrandKitScreen, { view: kit, said: null, confirm: noop, readSite: noop }));
+    expect(page.match(/Guess · confirm/g)!.length).toBe(4);
+    expect(html(createElement(BrandKitScreen, { view: { ...kit, may_confirm: false }, said: null, confirm: noop, readSite: noop }))).not.toMatch(/>Confirm</);
     keep("portal-brand", page);
     const art = await portalArtwork(mockBrand(), MOCK_PORTAL_CLIENT_ID, "Mother Moon Herbals");
-    expect(art.yours.map((r) => [r.id, r.chip.words, r.can_redraw])).toEqual([["af_moon_2", "Needs a redraw", true], ["af_moon_1", "Ready to print", false], ["af_moon_3", "Redrawn", false]]);
-    expect(art.from_nelson.map((r) => r.id)).toEqual(["af_moon_4"]);
-    keep("portal-artwork", html(createElement(ArtworkScreen, { view: art, said: null, redraw: noop })));
+    expect(art.yours.map((r) => [r.id, r.chip.words, r.can_redraw, r.main])).toEqual([["af_moon_1", "Ready to print", false, true], ["af_moon_2", "Needs a redraw", true, false], ["af_moon_3", "Redrawn", false, false]]);
+    expect(art.from_nelson.map((r) => [r.id, r.can_be_main])).toEqual([["af_moon_4", true]]);
+    expect(art.filters.map((f) => `${f.label} ${f.count}`)).toEqual(["All 4", "Logos 3", "Patterns 1"]);
+    expect((await portalArtwork(mockBrand(), MOCK_PORTAL_CLIENT_ID, "M", "pattern")).yours.map((r) => r.id)).toEqual(["af_moon_2"]);
+    keep("portal-artwork", html(createElement(ArtworkScreen, { view: art, said: null, redraw: noop, makeMain: noop })));
+  });
+
+  test("a website is read into a name, a summary, colours with colour first, fonts and a logo", async () => {
+    const { readSite } = await import("@/brand/read-site.ts");
+    const { nearestThread } = await import("@/brand/threads.ts");
+    const { portalSiteKit } = await import("@/portal/brand.ts");
+    const { BrandKitScreen } = await import("@/portal/brand-screens.tsx");
+    const page = `<html><head><title>Fynbos Coffee Co | Roasted in Stellenbosch</title>
+      <meta property="og:description" content="Small-batch coffee roasted in Stellenbosch. Slow mornings, honest beans &amp; nothing rushed.">
+      <meta name="theme-color" content="#1F4D3A"><link rel="stylesheet" href="/assets/site.css"><link rel="icon" href="/favicon.png">
+      <style>body{font-family:"DM Sans",Arial,sans-serif;color:#222;background:#fff}h1{font-family:'Fraunces',serif}</style></head>
+      <body><img class="site-logo" src="/img/fynbos-logo.png" alt="Fynbos"><img src="http://plain.example/logo.png" alt="logo"><p style="color:#C8102E">Sale</p></body></html>`;
+    const css = "a{color:#D4A017}.btn{background:#D4A017;border-color:#d4a018}.x{color:#fff;background:#ffffff;border:1px solid #FFF}h2{font-family:Fraunces,serif}p{font-family:'DM Sans'}i{font-family:FontAwesome}u{color:rgba(0,0,0,.5)}";
+    const read = readSite(page, [css], "https://fynboscoffee.co.za/");
+    expect(read.name).toBe("Fynbos Coffee Co");
+    expect(read.summary).toBe("Small-batch coffee roasted in Stellenbosch. Slow mornings, honest beans & nothing rushed.");
+    expect(read.colours.slice(0, 3)).toEqual(["#1F4D3A", "#D4A017", "#C8102E"]);
+    expect(read.colours).toContain("#FFFFFF");
+    expect(read.fonts).toEqual(["DM Sans", "Fraunces"]);
+    expect(read.logo_urls).toEqual(["https://fynboscoffee.co.za/img/fynbos-logo.png", "https://fynboscoffee.co.za/favicon.png"]);
+    expect(read.sheet_urls).toEqual(["https://fynboscoffee.co.za/assets/site.css"]);
+    expect([nearestThread("#1F4D3A"), nearestThread("#D4A017"), nearestThread("#fefefe")]).toEqual(["Forest green", "Gold", "White"]);
+    const view = portalSiteKit("fynboscoffee.co.za", read, [], "Fynbos Coffee Co");
+    expect(view).toMatchObject({ draft: true, may_confirm: false, read: "Read from fynboscoffee.co.za just now" });
+    expect(view.colours.every((c) => !c.sure)).toBe(true);
+    keep("portal-brand-read", html(createElement(BrandKitScreen, { view, said: null, confirm: noop, readSite: noop })));
   });
 });

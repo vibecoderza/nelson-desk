@@ -3,6 +3,7 @@
 // before anything else. On mock data it says what would happen and saves nothing.
 import { redirect } from "next/navigation";
 import { ARTWORK_ID, KIT_ITEM_ID, type ArtworkFile } from "../brand/file.ts";
+import { siteHost } from "../brand/read-site.ts";
 import { brandFile } from "../brand/source.ts";
 import { NOTHING_SAVED, saidUrl, type Said } from "../quotes/source.ts";
 import { portalClientId, portalRole } from "./who.ts";
@@ -19,6 +20,7 @@ async function ownKitItem(form: FormData): Promise<{ id: string; sure: boolean; 
   if (!KIT_ITEM_ID.test(id)) return null;
   const kit = await brandFile().kitFor(portalClientId());
   if (!kit || kit.client.id !== portalClientId()) return null;
+  if (id === "bs_summary") return kit.summary ? { id, sure: kit.summary.sure, name: "The summary" } : null;
   const all = [...kit.colours.map((c) => ({ id: c.id, sure: c.sure, name: c.name })), ...kit.fonts.map((f) => ({ id: f.id, sure: f.sure, name: f.name })), ...kit.rules.map((r) => ({ id: r.id, sure: r.sure, name: "That rule" }))];
   return all.find((i) => i.id === id) ?? null;
 }
@@ -37,4 +39,19 @@ export async function confirmKitItem(form: FormData): Promise<void> {
   if (portalRole() !== "owner") return back("/brand", { ok: false, text: "Only an Owner on your account can change the brand kit." });
   if (item.sure) return back("/brand", { ok: false, text: "That is already confirmed." });
   return back("/brand", { ok: true, text: `${item.name} would be confirmed. ${NOTHING_SAVED}` });
+}
+
+export async function makeMainLogo(form: FormData): Promise<void> {
+  const file = await ownArtwork(form);
+  if (!file) return back("/artwork", { ok: false, text: "That file is not here." });
+  if (file.tag !== "logo" || file.check.verdict !== "ready") return back("/artwork", { ok: false, text: "Only a logo that is ready to print can be the main logo." });
+  return back("/artwork", { ok: true, text: `${file.name} would become your main logo, the one mockups start with. ${NOTHING_SAVED}` });
+}
+
+// The one action that touches nothing on file: it checks what was typed is a public web address and opens the kit
+// page on it. The page does the reading.
+export async function readWebsite(form: FormData): Promise<void> {
+  const host = siteHost(text(form, "site"));
+  if (!host) return back("/brand", { ok: false, text: "Type your website address, like yourbrand.co.za." });
+  return redirect(`/brand?site=${encodeURIComponent(host)}`);
 }
