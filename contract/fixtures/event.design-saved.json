@@ -1,0 +1,16 @@
+{
+  "schema": "nelson.event/1",
+  "id": "ev_01JD3DESIGNSAVED01",
+  "type": "design.saved",
+  "occurred_at": "2026-11-21T08:14:05Z",
+  "subject": {
+    "type": "design",
+    "id": "d_mm_cap"
+  },
+  "data": {
+    "ref": "d_mm_cap",
+    "rev": 4,
+    "owner": "c_mothermoon",
+    "product_code": "NEL-CAP-6P"
+  }
+}

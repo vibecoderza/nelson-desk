@@ -1,0 +1,21 @@
+{
+  "schema": "nelson.event/1",
+  "id": "ev_01JD3COSTMOVED0001",
+  "type": "cost.moved",
+  "occurred_at": "2026-11-21T08:14:05Z",
+  "subject": {
+    "type": "cost",
+    "id": "2026-11-21"
+  },
+  "data": {
+    "threshold_pct": 5,
+    "moves": [
+      {
+        "product_code": "NEL-TUM-500",
+        "previous_price_version": "pv_2026-11-19_a1",
+        "price_version": "pv_2026-11-20_b7",
+        "change_pct": 6.1
+      }
+    ]
+  }
+}

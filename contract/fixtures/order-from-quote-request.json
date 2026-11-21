@@ -1,0 +1,54 @@
+{
+  "quote_ref": "Q-00007",
+  "version": 3,
+  "price_version": "pv_2026-11-19_a1",
+  "client_id": "c_mothermoon",
+  "lines": [
+    {
+      "line_id": "ql_cap01",
+      "product_code": "NEL-CAP-6P",
+      "colour": "forest",
+      "quantity": 100,
+      "design": {
+        "ref": "d_mm_cap",
+        "rev": 3
+      },
+      "unit_cents": 9500,
+      "setup_cents": 35000
+    },
+    {
+      "line_id": "ql_tum01",
+      "product_code": "NEL-TUM-500",
+      "colour": "copper",
+      "quantity": 50,
+      "design": {
+        "ref": "d_mm_tumbler",
+        "rev": 1
+      },
+      "unit_cents": 14500,
+      "setup_cents": 25000
+    }
+  ],
+  "contact": {
+    "name": "Holly Mokoena",
+    "email": "holly@mothermoon.example",
+    "phone": "+27215550142"
+  },
+  "ship_to": {
+    "line1": "14 Kloof Street",
+    "suburb": "Gardens",
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "postal_code": "8001",
+    "country": "ZA"
+  },
+  "delivery": {
+    "service": "economy",
+    "price_cents": 18500
+  },
+  "payment": {
+    "kind": "full",
+    "amount_cents": 1753500
+  },
+  "total_cents": 1753500
+}

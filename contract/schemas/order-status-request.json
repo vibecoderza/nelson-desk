@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/order-status-request.json",
+  "type": "object",
+  "properties": {
+    "status": {
+      "enum": [
+        "in_production",
+        "dispatched"
+      ]
+    },
+    "marked_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supplier_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pack_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "supplier_ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "pack_id",
+          "supplier_ref"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "waybill": {
+      "type": "object",
+      "properties": {
+        "courier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "service": {
+          "type": "string",
+          "minLength": 1
+        },
+        "number": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cartons": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tracking_url": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "courier",
+        "number"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "status",
+    "marked_by"
+  ],
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "status": {
+        "const": "dispatched"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "status",
+      "marked_by",
+      "waybill"
+    ]
+  },
+  "title": "POST /api/v1/orders/{ref}/status request",
+  "description": "The two Alan clicks. Pack status keeps one writer: Nelson."
+}

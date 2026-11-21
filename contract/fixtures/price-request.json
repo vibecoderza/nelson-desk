@@ -1,0 +1,51 @@
+{
+  "quote_ref": "Q-00007",
+  "currency": "ZAR",
+  "delivery_address": {
+    "line1": "14 Kloof Street",
+    "suburb": "Gardens",
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "postal_code": "8001",
+    "country": "ZA"
+  },
+  "lines": [
+    {
+      "line_id": "ql_cap01",
+      "product_code": "NEL-CAP-6P",
+      "colour": "forest",
+      "quantity": 100,
+      "design": {
+        "ref": "d_mm_cap",
+        "rev": 3
+      },
+      "decoration": [
+        {
+          "position": "front",
+          "method": "embroidery",
+          "colours": 2,
+          "width_mm": 60,
+          "height_mm": 25
+        }
+      ]
+    },
+    {
+      "line_id": "ql_tum01",
+      "product_code": "NEL-TUM-500",
+      "colour": "copper",
+      "quantity": 50,
+      "design": {
+        "ref": "d_mm_tumbler",
+        "rev": 1
+      },
+      "decoration": [
+        {
+          "position": "wrap",
+          "method": "laser",
+          "width_mm": 40,
+          "height_mm": 15
+        }
+      ]
+    }
+  ]
+}

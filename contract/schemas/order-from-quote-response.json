@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/order-from-quote-response.json",
+  "type": "object",
+  "properties": {
+    "order_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pay_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "pay_url_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "order_ref",
+    "pay_url",
+    "pay_url_expires_at"
+  ],
+  "additionalProperties": false,
+  "title": "Draft order created",
+  "description": "order_ref is Nelson's reference for the Shopify draft order. The Desk maps it to an N- number when order.paid arrives."
+}

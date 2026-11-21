@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/order-ack.json",
+  "type": "object",
+  "properties": {
+    "order_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pack_status": {
+      "enum": [
+        "ready",
+        "placed",
+        "proof_approved",
+        "in_production",
+        "dispatched",
+        "delivered",
+        "cancelled"
+      ]
+    }
+  },
+  "required": [
+    "order_ref",
+    "pack_status"
+  ],
+  "additionalProperties": false,
+  "title": "Order acknowledged"
+}

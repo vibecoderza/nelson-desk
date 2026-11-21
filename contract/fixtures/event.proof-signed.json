@@ -1,0 +1,19 @@
+{
+  "schema": "nelson.event/1",
+  "id": "ev_01JD3PROOFSIGNED01",
+  "type": "proof.signed",
+  "occurred_at": "2026-11-21T08:14:05Z",
+  "subject": {
+    "type": "proof",
+    "id": "PP-1042"
+  },
+  "data": {
+    "order_ref": "ord_7Hq2mXc94Tz",
+    "proof_ref": "PP-1042",
+    "round": 1,
+    "sheet_sha256": "9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f",
+    "record_sha256": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
+    "signed_at": "2026-11-24T09:30:00Z",
+    "signed_by": "Holly Mokoena"
+  }
+}

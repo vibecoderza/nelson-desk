@@ -1,0 +1,15 @@
+{
+  "schema": "nelson.event/1",
+  "id": "ev_01JD3QUOTEACCEPT01",
+  "type": "quote.accepted",
+  "occurred_at": "2026-11-21T08:14:05Z",
+  "subject": {
+    "type": "quote",
+    "id": "Q-00007"
+  },
+  "data": {
+    "quote_ref": "Q-00007",
+    "version": 3,
+    "order_ref": "ord_7Hq2mXc94Tz"
+  }
+}

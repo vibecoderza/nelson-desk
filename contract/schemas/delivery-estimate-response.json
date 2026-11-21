@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/delivery-estimate-response.json",
+  "type": "object",
+  "properties": {
+    "production_days": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "transit_days": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "target_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "carton_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "lead_time_basis": {
+      "enum": [
+        "default",
+        "product"
+      ]
+    },
+    "freight_options": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "enum": [
+              "economy",
+              "express"
+            ]
+          },
+          "price_cents": {
+            "$ref": "common.json#/$defs/cents"
+          },
+          "transit_days": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "target_date": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "service",
+          "price_cents",
+          "transit_days",
+          "target_date"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "production_days",
+    "transit_days",
+    "target_date",
+    "carton_count",
+    "lead_time_basis",
+    "freight_options"
+  ],
+  "additionalProperties": false,
+  "title": "Delivery estimate",
+  "description": "Nelson owns the lead-time table and the holiday calendar. The Desk never invents a date."
+}

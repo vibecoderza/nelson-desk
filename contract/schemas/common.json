@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/common.json",
+  "title": "Shared shapes",
+  "$defs": {
+    "cents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Integer cents, ZAR. No VAT anywhere."
+    },
+    "product_code": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 40,
+      "description": "Our product code. Never a supplier's."
+    },
+    "quote_ref": {
+      "type": "string",
+      "pattern": "^Q-[0-9]{5,}$"
+    },
+    "design_pin": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "ref",
+        "rev"
+      ],
+      "additionalProperties": false
+    },
+    "decoration": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method": {
+          "enum": [
+            "embroidery",
+            "laser",
+            "screen",
+            "pad",
+            "digital",
+            "sublimation",
+            "deboss",
+            "none"
+          ]
+        },
+        "colours": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "width_mm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height_mm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "position",
+        "method"
+      ],
+      "additionalProperties": false
+    },
+    "address": {
+      "type": "object",
+      "properties": {
+        "line1": {
+          "type": "string",
+          "minLength": 1
+        },
+        "line2": {
+          "type": "string"
+        },
+        "suburb": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1
+        },
+        "province": {
+          "type": "string",
+          "minLength": 1
+        },
+        "postal_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "country": {
+          "const": "ZA"
+        }
+      },
+      "required": [
+        "city",
+        "province",
+        "postal_code",
+        "country"
+      ],
+      "additionalProperties": false
+    },
+    "contact": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "email"
+      ],
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

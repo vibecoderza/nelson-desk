@@ -1,0 +1,101 @@
+{
+  "view": "staff",
+  "price_version": "pv_2026-11-19_a1",
+  "currency": "ZAR",
+  "valid_until": "2026-12-03T21:59:59Z",
+  "lines": [
+    {
+      "line_id": "ql_cap01",
+      "status": "priced",
+      "below_floor": false,
+      "quantity": 100,
+      "unit_cents": 9500,
+      "setup_cents": 35000,
+      "line_total_cents": 950000,
+      "ladder": [
+        {
+          "min_quantity": 50,
+          "unit_cents": 10500
+        },
+        {
+          "min_quantity": 100,
+          "unit_cents": 9500
+        },
+        {
+          "min_quantity": 250,
+          "unit_cents": 8650
+        }
+      ],
+      "staff": {
+        "supplier": "Amrod",
+        "supplier_code": "BH-0042",
+        "stock": 1840,
+        "incoming_stock": [
+          {
+            "quantity": 500,
+            "due": "2026-12-02"
+          }
+        ],
+        "unit_cost_cents": 3900,
+        "branding_cost_cents": 2311,
+        "markup_applied_pct": 52.95,
+        "margin_cents": 328900,
+        "margin_pct": 34.6
+      }
+    },
+    {
+      "line_id": "ql_tum01",
+      "status": "priced",
+      "below_floor": false,
+      "quantity": 50,
+      "unit_cents": 14500,
+      "setup_cents": 25000,
+      "line_total_cents": 725000,
+      "ladder": [
+        {
+          "min_quantity": 25,
+          "unit_cents": 15500
+        },
+        {
+          "min_quantity": 50,
+          "unit_cents": 14500
+        },
+        {
+          "min_quantity": 100,
+          "unit_cents": 13500
+        }
+      ],
+      "staff": {
+        "supplier": "Amrod",
+        "supplier_code": "DW-1187",
+        "stock": 36,
+        "incoming_stock": [
+          {
+            "quantity": 200,
+            "due": "2026-12-02"
+          }
+        ],
+        "unit_cost_cents": 8200,
+        "branding_cost_cents": 1280,
+        "markup_applied_pct": 52.95,
+        "margin_cents": 251000,
+        "margin_pct": 34.6
+      }
+    }
+  ],
+  "delivery": {
+    "service": "economy",
+    "price_cents": 18500
+  },
+  "totals": {
+    "lines_cents": 1675000,
+    "setup_cents": 60000,
+    "delivery_cents": 18500,
+    "total_cents": 1753500
+  },
+  "staff": {
+    "cost_cents": 1095100,
+    "margin_cents": 579900,
+    "margin_pct": 34.6
+  }
+}

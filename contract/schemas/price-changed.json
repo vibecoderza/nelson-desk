@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/price-changed.json",
+  "type": "object",
+  "properties": {
+    "error": {
+      "const": "price_changed"
+    },
+    "price_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unit_cents": {
+            "$ref": "common.json#/$defs/cents"
+          },
+          "setup_cents": {
+            "$ref": "common.json#/$defs/cents"
+          }
+        },
+        "required": [
+          "line_id",
+          "unit_cents",
+          "setup_cents"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "error",
+    "price_version"
+  ],
+  "additionalProperties": false,
+  "title": "409 price_changed",
+  "description": "Nelson re-checks every amount. A mismatch refuses the order and names the current price_version."
+}

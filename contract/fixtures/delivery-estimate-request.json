@@ -1,0 +1,21 @@
+{
+  "lines": [
+    {
+      "product_code": "NEL-CAP-6P",
+      "quantity": 100
+    },
+    {
+      "product_code": "NEL-TUM-500",
+      "quantity": 50
+    }
+  ],
+  "delivery_address": {
+    "line1": "14 Kloof Street",
+    "suburb": "Gardens",
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "postal_code": "8001",
+    "country": "ZA"
+  },
+  "sign_date": "2026-11-23"
+}

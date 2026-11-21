@@ -1,0 +1,14 @@
+{
+  "schema": "nelson.event/1",
+  "id": "ev_01JD3ORDERCANCEL01",
+  "type": "order.cancelled",
+  "occurred_at": "2026-11-21T08:14:05Z",
+  "subject": {
+    "type": "order",
+    "id": "ord_7Hq2mXc94Tz"
+  },
+  "data": {
+    "order_ref": "ord_7Hq2mXc94Tz",
+    "reason": "Refunded in the shop"
+  }
+}

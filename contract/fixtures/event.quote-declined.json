@@ -1,0 +1,15 @@
+{
+  "schema": "nelson.event/1",
+  "id": "ev_01JD3QUOTEDECLINE1",
+  "type": "quote.declined",
+  "occurred_at": "2026-11-21T08:14:05Z",
+  "subject": {
+    "type": "quote",
+    "id": "Q-00012"
+  },
+  "data": {
+    "quote_ref": "Q-00012",
+    "version": 1,
+    "reason": "too_expensive"
+  }
+}

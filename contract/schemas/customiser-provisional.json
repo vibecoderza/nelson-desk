@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contract.dearnelson.co.za/v1/customiser-provisional.json",
+  "title": "Customiser documents, provisional",
+  "description": "Placeholders until the customiser thread publishes the four schemas in customiser/studio-engine/contracts/ (target 23 Nov). Only the fields the Desk pins on are stated; everything else is open. Replace, do not extend.",
+  "x-provisional": true,
+  "$defs": {
+    "design": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "const": "nelson.design/1"
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "product_code": {
+          "$ref": "common.json#/$defs/product_code"
+        }
+      },
+      "required": [
+        "schema",
+        "ref",
+        "rev",
+        "owner",
+        "product_code"
+      ],
+      "additionalProperties": true
+    },
+    "mockup_set": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "const": "nelson.mockup-set/1"
+        },
+        "design": {
+          "$ref": "common.json#/$defs/design_pin"
+        },
+        "mockups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "colour": {
+                "type": "string",
+                "minLength": 1
+              },
+              "angle": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "source": {
+                "enum": [
+                  "photo",
+                  "drawing"
+                ]
+              }
+            },
+            "required": [
+              "colour",
+              "angle",
+              "url",
+              "source"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": [
+        "schema",
+        "design",
+        "mockups"
+      ],
+      "additionalProperties": true
+    },
+    "design_check": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "const": "nelson.design-check/1"
+        },
+        "design": {
+          "$ref": "common.json#/$defs/design_pin"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "codes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "limit": {}
+            },
+            "required": [
+              "code"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "stitch_estimate": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema",
+        "pass",
+        "codes"
+      ],
+      "additionalProperties": true
+    },
+    "order_pack": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "const": "nelson.order-pack/1"
+        }
+      },
+      "required": [
+        "schema"
+      ],
+      "additionalProperties": true,
+      "description": "Staff key only: it names the supplier."
+    }
+  }
+}

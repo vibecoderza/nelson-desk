@@ -1,0 +1,38 @@
+{
+  "client_id": "c_mothermoon",
+  "updated_at": "2026-11-18T10:00:00Z",
+  "logos": [
+    {
+      "id": "bl_01",
+      "name": "Mother Moon wordmark",
+      "kind": "vector",
+      "url": "https://files.dearnelson.example/signed/bl_01?sig=example"
+    }
+  ],
+  "colours": [
+    {
+      "name": "Moon green",
+      "hex": "#09332c",
+      "nearest_thread": "Forest 1174",
+      "confirmed": true
+    },
+    {
+      "name": "Clay",
+      "hex": "#c8643c",
+      "nearest_thread": null,
+      "confirmed": false
+    }
+  ],
+  "fonts": [
+    {
+      "family": "Geist",
+      "use": "Headings"
+    }
+  ],
+  "rules": [
+    {
+      "id": "br_01",
+      "text": "Keep the wordmark on one line."
+    }
+  ]
+}
