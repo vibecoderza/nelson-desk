@@ -1,0 +1,36 @@
+# Phase 1 cards: quotes
+
+Brief sections 5 and 8. Every card carries: conforms to Architecture blueprint (section h), both exposure tests green.
+
+## Done in this repo (on mock data)
+
+| Card | Acceptance | Proof |
+| --- | --- | --- |
+| 1.1 Quote book | One customer-safe shape for a quote, its versions, lines, changes and messages, following the schema. A stand-in book of eleven quotes covers every state | `src/quotes/book.ts`, `src/mock/book.ts` |
+| 1.2 Stand-in Nelson | Answers inside the app from the contract's fixtures, answer for answer with `mock/server.ts`. The staff half sits under `src/desk` only. Ends by itself when a database or `NELSON_BASE_URL` is set | `src/mock/`, `src/desk/mock-nelson-staff.ts`, `test/quote-screens.test.ts` |
+| 1.3 Desk: pipeline and Today | Open, Accepted, Declined, Expired. Overdue follow-ups lead. Win rate, hours to first quote, days to a decision, why we lose | `/quotes`, `/` on the Desk host |
+| 1.4 Desk: quote builder | Every price cell is Nelson's answer. Supplier, stock, cost, mark-up (read-only) and margin from the staff view. Client changes with the design-check words. Freight from Nelson | `/quotes/Q-…` |
+| 1.5 Official quote | Made from a sent version, customer view only, checked before it draws. One total, "No VAT charged", prints to A4 | `/quotes/Q-…/pdf` (Desk), `/quotes/Q-…/document` (Portal) |
+| 1.6 Portal: quotes, quote, accept or decline | A client's own sent quotes only. Versions, what changed, line states, accept locked until every line reads Agreed, six decline reasons, budget for "too expensive" | `/quotes`, `/quotes/Q-…`, `/quotes/Q-…/decide` |
+| 1.7 Actions | Every button asks the state machines and says what they answered. Nothing is written yet | `src/desk/actions.ts`, `src/portal/actions.ts` |
+| 1.8 Exposure | Every Portal view and page, for every quote and version, walked as data and as HTML | `test/exposure-portal.test.ts` |
+
+## Open, next cards
+
+| Card | What |
+| --- | --- |
+| 1.9 Database quote book | Read the same shapes from Neon (Desk as owner, Portal through the `portal` views), and match a Portal session's Clerk Organisation to its client. Waits on Neon, and Neon waits on the Desk's second factor |
+| 1.10 Writes | Each action becomes a `commit()`: state, one event, outbox rows. Send freezes a version with Nelson's customer and staff answers |
+| 1.11 Server-made PDF | The same sheet, made on the server and stored privately with the version, so it can go out by email |
+| 1.12 Clients and people, email, Inbox | The rest of the brief's phase 1 |
+
+## Calls made in the build, for Alan to overrule
+
+1. The follow-up clock stops while a client's change waits on Nelson. A chase is wrong when the next move is ours.
+2. The mark-up column shows Nelson's rule, read-only (decision 1).
+3. The official quote drops "Company and VAT details" and says "No VAT charged" (brief section 10, row 2).
+4. The Portal does not promise a proof "within one working day": decision 6 has no owner yet. It says a proof comes first and nothing is made until it is signed.
+5. Product pictures are a colour tile until the customiser publishes mockups. No drawn stand-ins, no generated pictures.
+6. Deposit (50% over R 20 000), validity (14 days) and lead time (7 working days) sit in `src/quotes/settings.ts` at the brief's recommended defaults.
+7. The design's "Tumbler removed" strip disagreed with its own lines. The stand-in quote keeps the tumbler and its numbers are Nelson's price fixture, so every total adds up.
+8. On mock data every signed-in Portal session sees the one sample client (Mother Moon Herbals). The quotes are invented; no client's real data exists yet.

@@ -20,6 +20,15 @@ import { declineQuote } from "@/backbone/quote-decisions.ts";
 import { tableColumns, wallsSql, INIT_SQL, WALLS_SQL } from "../scripts/build-walls.ts";
 import { listen, MOCK_DESK_KEY } from "../mock/server.ts";
 import { seedQuote, testDb } from "./helpers/db.ts";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { mockBook, mockQuotes, MOCK_PORTAL_CLIENT_ID } from "@/mock/book.ts";
+import { portalDecide, portalQuote, portalQuotes } from "@/portal/quotes.ts";
+import { DecideScreen, DocumentScreen, QuoteScreen, QuotesScreen } from "@/portal/screens.tsx";
+import { quoteDocument } from "@/quotes/document.ts";
+import { builder } from "@/desk/quotes.ts";
+import { nelsonStaffConfig } from "@/desk/mock-nelson-staff.ts";
+import { BuilderScreen } from "@/desk/screens.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const STAFF_TABLES = ["quote_line_staff", "quote_version_staff", "order_line_staff", "supplier", "costing_request", "costing_answer", "outbox", "webhook_inbox", "agent", "agent_log", "audit_log", "staff_user", "setting", "client_note", "brief", "enquiry", "follow_up", "template", "client_source"];
@@ -268,5 +277,89 @@ describe("the code a client's pages can load", () => {
       if (!/_HOST$/.test(name!)) expect(value, `${name} has a value in .env.example`).toBe("");
     }
     expect(readFileSync(path.join(ROOT, ".gitignore"), "utf8")).toMatch(/^\.env$/m);
+  });
+});
+
+// Phase 1: the quote screens. Every view a client can open, and the page drawn from it, is walked the same way.
+describe("the quote screens a client can open", () => {
+  const NOW = new Date("2026-11-21T11:00:00Z");
+  const book = mockBook(() => NOW);
+  const noop = async () => {};
+  // Words that belong to the Desk alone. None may appear on a page a client reads.
+  const STAFF_WORDS = /\b(margin|mark-?up|supplier|stock|cost|costs|costing)\b/i;
+  const clean = (what: string, view: unknown, page: string) => {
+    expect(leaksIn(view), what).toEqual([]);
+    expect(leaksInText(page), what).toEqual([]);
+    expect(page.match(STAFF_WORDS)?.[0] ?? null, what).toBeNull();
+  };
+
+  test("the stand-in book holds the customer view only", () => {
+    expect(leaksIn(mockQuotes(NOW))).toEqual([]);
+  });
+
+  test("the list, every quote, every version, the decision page and the official quote are clean, as data and as HTML", async () => {
+    let pages = 0;
+    for (const quote of mockQuotes(NOW).filter((q) => q.state !== "draft")) {
+      const client = quote.client.id;
+      for (const tab of ["open", "accepted", "closed"] as const) {
+        const view = (await portalQuotes(book, client, tab, NOW))!;
+        clean(`${client} ${tab}`, view, renderToStaticMarkup(createElement(QuotesScreen, { view, said: null, reopen: noop })));
+      }
+      for (const v of [undefined, ...quote.versions.map((x) => x.version)]) {
+        const view = (await portalQuote(book, client, quote.ref, v, NOW))!;
+        clean(`${quote.ref} v${v ?? "latest"}`, view, renderToStaticMarkup(createElement(QuoteScreen, { view, said: null, takeSuggestion: noop, ask: noop })));
+        const doc = quoteDocument(quote, v)!;
+        clean(`${quote.ref} document v${v ?? "latest"}`, doc, renderToStaticMarkup(createElement(DocumentScreen, { doc, printButton: null })));
+        pages += 2;
+      }
+      const decide = (await portalDecide(book, client, quote.ref))!;
+      clean(`${quote.ref} decide`, decide, renderToStaticMarkup(createElement(DecideScreen, { view: decide, said: null, accept: noop, decline: noop })));
+    }
+    expect(pages).toBeGreaterThan(30);
+  });
+
+  test("the check is live: the Desk's builder, drawn the same way, trips every part of it", async () => {
+    const view = (await builder(book, nelsonStaffConfig({}), "Q-00007", NOW))!;
+    const page = renderToStaticMarkup(createElement(BuilderScreen, { view, said: null, actions: { answer: noop, send: noop, reply: noop } }));
+    expect(leaksIn(view).some((l) => l.kind === "private_key")).toBe(true);
+    expect(leaksInText(page).some((l) => l.kind === "supplier_name")).toBe(true);
+    expect(page).toMatch(STAFF_WORDS);
+  });
+
+  test("a client reaches their own sent quotes and nothing else: not a draft, not another client's", async () => {
+    // Q-00003 belongs to another client; Q-00013 is a draft; Q-99999 does not exist. All three look the same.
+    for (const ref of ["Q-00003", "Q-00013", "Q-99999"]) {
+      expect(await portalQuote(book, MOCK_PORTAL_CLIENT_ID, ref, undefined, NOW), ref).toBeNull();
+      expect(await portalDecide(book, MOCK_PORTAL_CLIENT_ID, ref), ref).toBeNull();
+    }
+    expect(await portalQuote(book, "c_karoo", "Q-00013", undefined, NOW)).toBeNull(); // its own draft, still Nelson's
+    expect(await portalQuotes(book, "c_karoo", "open", NOW)).toBeNull();
+    const refs = (await Promise.all((["open", "accepted", "closed"] as const).map((t) => portalQuotes(book, MOCK_PORTAL_CLIENT_ID, t, NOW)))).flatMap((v) => v!.rows.map((r) => r.ref));
+    expect(refs.sort()).toEqual(["Q-00001", "Q-00002", "Q-00005", "Q-00007", "Q-00012"]);
+  });
+
+  test("the Portal's pages and actions check whose quote it is before anything else", () => {
+    const read = (f: string) => readFileSync(path.join(ROOT, f), "utf8");
+    expect(read("app/portal/quotes/[ref]/document/page.tsx")).toMatch(/quote\.client\.id === clientId && quote\.state !== "draft"/);
+    const actions = read("src/portal/actions.ts");
+    expect(actions).toMatch(/quote\.client\.id === portalClientId\(\) && quote\.state !== "draft"/);
+    // Every exported action starts from the client's own quote.
+    const exported = [...actions.matchAll(/export async function (\w+)\(form: FormData\): Promise<void> \{\n\s+const q = await ownQuote\(form\);/g)].map((m) => m[1]);
+    expect(exported.sort()).toEqual([...actions.matchAll(/export async function (\w+)/g)].map((m) => m[1]).sort());
+    expect(exported.length).toBeGreaterThanOrEqual(5);
+  });
+
+  test("the staff price fixture and the staff key are named under src/desk only", () => {
+    const walk = (dir: string): string[] => readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []);
+    const naming = [...walk("src"), ...walk("app")].filter((f) => !f.startsWith(path.join("src", "generated")) && /price-response\.staff|NELSON_STAFF_API_KEY|INLINE_STAFF_KEY\b.*inlineNelson\(\{/.test(readFileSync(path.join(ROOT, f), "utf8")));
+    expect(naming.length).toBeGreaterThan(0);
+    expect(naming.filter((f) => !f.startsWith(path.join("src", "desk")))).toEqual([]);
+  });
+
+  test("the one script that runs in a browser is a print button with no data in it", () => {
+    const walk = (dir: string): string[] => readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []);
+    const client = [...walk("src"), ...walk("app")].filter((f) => /^\s*["']use client["']/.test(readFileSync(path.join(ROOT, f), "utf8")));
+    expect(client).toEqual([path.join("src", "ui", "print-button.tsx")]);
+    expect(readFileSync(path.join(ROOT, client[0]!), "utf8")).not.toMatch(/import /);
   });
 });
