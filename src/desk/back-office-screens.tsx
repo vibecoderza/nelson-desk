@@ -2,6 +2,7 @@
 import { Chip } from "../ui/bits.tsx";
 import { plural, rand } from "../ui/format.ts";
 import type { Business } from "./business.ts";
+import type { DeskSettings } from "./settings.ts";
 import type { Suppliers } from "./suppliers.ts";
 
 const whole = (cents: number | null) => rand(cents, { decimals: false });
@@ -76,6 +77,31 @@ export function SuppliersScreen({ view }: { view: Suppliers }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// Settings: what the Desk runs on, read-only until the database holds them.
+const SettingsGroup = ({ title, rows }: { title: string; rows: DeskSettings["rules"] }) => (
+  <section className="group">
+    <h2 className="group-title">{title}</h2>
+    <div className="list">
+      {rows.map((row) => (
+        <article key={row.title} className="item">
+          <div className="item-main"><span className="item-title">{row.title}</span><span className="item-sub">{row.sub}</span></div>
+          {row.chip && <Chip tone={row.chip.tone}>{row.chip.words}</Chip>}
+        </article>
+      ))}
+    </div>
+  </section>
+);
+export function DeskSettingsScreen({ view }: { view: DeskSettings }) {
+  return (
+    <div className="page is-calm is-wide">
+      <header className="head"><h1>Settings</h1></header>
+      <SettingsGroup title="Quote rules" rows={view.rules} />
+      <SettingsGroup title="Sign-in" rows={view.people} />
+      <SettingsGroup title="Connections" rows={view.connections} />
     </div>
   );
 }

@@ -271,3 +271,26 @@ describe("the Portal's mockup shop", () => {
     keep("portal-shop", html(createElement(ShopScreen, { view, said: null, again: noop })));
   });
 });
+
+describe("settings on both sides", () => {
+  test("the Portal shows the company, the updates and the team; the Desk shows rules and what is connected", async () => {
+    const { portalSettings } = await import("@/portal/settings.ts");
+    const { SettingsScreen } = await import("@/portal/settings-screens.tsx");
+    const { deskSettings } = await import("@/desk/settings.ts");
+    const { DeskSettingsScreen } = await import("@/desk/back-office-screens.tsx");
+    const view = (await portalSettings(quotes, file, MOCK_PORTAL_CLIENT_ID, true))!;
+    expect(view.company[0]).toEqual({ label: "Company", words: "Mother Moon Herbals" });
+    expect(view.updates.find((u) => u.kind === "orders")).toMatchObject({ locked: true, email: true, whatsapp: true });
+    expect(view.team.map((p) => p.role)).toEqual(["Owner", "Buyer"]);
+    keep("portal-settings", html(createElement(SettingsScreen, { view, said: null, save: noop })));
+    const bare = deskSettings({});
+    expect(bare.connections.slice(0, 2).map((c) => c.chip!.words)).toEqual(["Sample data", "Sample data"]);
+    expect(bare.people.map((p) => p.chip!.words)).toEqual(["Not set", "On"]);
+    const live = deskSettings({ DATABASE_URL: "x", NELSON_BASE_URL: "y", DESK_STAFF_EMAILS: "a@b.c, d@e.f" });
+    expect(live.connections.slice(0, 2).map((c) => c.chip!.words)).toEqual(["Connected", "Connected"]);
+    expect(live.people[0]).toMatchObject({ sub: "2 addresses on the allow-list" });
+    expect(JSON.stringify(live)).not.toMatch(/a@b\.c|"x"|"y"/);
+    expect(bare.rules[0]!.title).toBe("A quote is valid for 14 days");
+    keep("desk-settings", html(createElement(DeskSettingsScreen, { view: deskSettings({ DESK_STAFF_EMAILS: "a@b.c,d@e.f", DESK_SECOND_FACTOR: "off" }) })));
+  });
+});

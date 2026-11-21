@@ -40,6 +40,8 @@ import { portalArtwork, portalBrandKit, portalSiteKit } from "@/portal/brand.ts"
 import { ArtworkScreen, BrandKitScreen } from "@/portal/brand-screens.tsx";
 import { portalShop, shopItems } from "@/portal/shop.ts";
 import { ShopScreen } from "@/portal/shop-screens.tsx";
+import { portalSettings } from "@/portal/settings.ts";
+import { SettingsScreen } from "@/portal/settings-screens.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const STAFF_TABLES = ["quote_line_staff", "quote_version_staff", "order_line_staff", "supplier", "costing_request", "costing_answer", "outbox", "webhook_inbox", "agent", "agent_log", "audit_log", "staff_user", "setting", "client_note", "brief", "enquiry", "follow_up", "template", "client_source"];
@@ -575,5 +577,41 @@ describe("the mockup shop a client can open", () => {
     expect([...actions.matchAll(/export (?:async function|const) (\w+)/g)].map((m) => m[1])).toEqual(exported);
     expect(actions).toMatch(/shopItems\(quoteBook\(\), orderFile\(\), portalClientId\(\)\)/);
     expect(actions).not.toMatch(/unit_cents|cents/);
+  });
+});
+
+describe("the settings a client can open", () => {
+  const NOW = new Date("2026-11-21T11:00:00Z");
+  const file = mockOrders(() => NOW);
+  const quotes = mockBook(() => NOW);
+  const noop = async () => {};
+
+  test("settings are clean for every client and show their own company only", async () => {
+    const clients = [...new Set(mockOrderList(NOW).map((o) => o.client))];
+    for (const client of clients) {
+      const view = (await portalSettings(quotes, file, client.id, true))!;
+      const page = renderToStaticMarkup(createElement(SettingsScreen, { view, said: null, save: noop }));
+      expect(leaksIn(view), client.id).toEqual([]);
+      expect(leaksInText(page), client.id).toEqual([]);
+      expect(page.match(/\b(margin|mark-?up|supplier|stock|cost|costs|costing|print house|VAT)\b/i)?.[0] ?? null, client.id).toBeNull();
+      for (const other of clients.filter((c) => c.id !== client.id)) expect(page, `${client.id} sees ${other.id}`).not.toContain(other.name);
+    }
+    expect(await portalSettings(quotes, file, "c_nobody", true)).toBeNull();
+    // A book that hands over everyone's still yields this client's company.
+    const all = await quotes.all();
+    expect((await portalSettings({ ...quotes, forClient: async () => all }, file, MOCK_PORTAL_CLIENT_ID, true))!.client_name).toBe("Mother Moon Herbals");
+  });
+
+  test("only an Owner saves settings, order updates cannot be switched off, and the page prints no address of ours or key", () => {
+    const actions = readFileSync(path.join(ROOT, "src/portal/settings-actions.ts"), "utf8");
+    expect(actions).toMatch(/export async function saveUpdates\(form: FormData\): Promise<void> \{\n\s+if \(portalRole\(\) !== "owner"\) return redirect/);
+    expect([...actions.matchAll(/export (?:async function|const) (\w+)/g)].map((m) => m[1])).toEqual(["saveUpdates"]);
+    expect(actions).toMatch(/k !== "orders"/);
+    const viewer = renderToStaticMarkup(createElement(SettingsScreen, { view: { client_name: "A", may_change: false, company: [], updates: [{ kind: "quotes", title: "Quotes", sub: "", email: true, whatsapp: true, locked: false }], team: [] }, said: null, save: noop }));
+    expect(viewer).not.toMatch(/>Save</);
+    expect(viewer.match(/disabled/g)!.length).toBe(2);
+    // The Desk's settings report whether a thing is set, never its value.
+    const desk = readFileSync(path.join(ROOT, "src/desk/settings.ts"), "utf8");
+    expect(desk).not.toMatch(/env\.[A-Z_]+|process\.env\.[A-Z]/);
   });
 });

@@ -23,8 +23,8 @@ function Rail({ items }: { items: NavItem[] }) {
   );
 }
 
-export type DeskPlace = "today" | "inbox" | "quotes" | "orders" | "clients" | "suppliers" | "business";
-export type PortalPlace = "home" | "quotes" | "orders" | "shop" | "artwork" | "brand";
+export type DeskPlace = "today" | "inbox" | "quotes" | "orders" | "clients" | "suppliers" | "business" | "settings";
+export type PortalPlace = "home" | "quotes" | "orders" | "shop" | "artwork" | "brand" | "settings";
 
 export function DeskShell({ current, openQuotes, openOrders, waiting, children }: { current: DeskPlace; openQuotes: number; openOrders: number; waiting: number; children: ReactNode }) {
   const items: NavItem[] = [
@@ -35,6 +35,7 @@ export function DeskShell({ current, openQuotes, openOrders, waiting, children }
     { label: "Clients", href: "/clients", current: current === "clients" },
     { label: "Suppliers", href: "/suppliers", current: current === "suppliers" },
     { label: "Business", href: "/business", current: current === "business" },
+    { label: "Settings", href: "/settings", current: current === "settings" },
   ];
   return (
     <div className="app">
@@ -56,6 +57,7 @@ export function PortalShell({ current, clientName, openQuotes, openOrders, conta
     { label: "Mockup shop", href: "/shop", current: current === "shop" },
     { label: "Artwork", href: "/artwork", current: current === "artwork" },
     { label: "Brand kit", href: "/brand", current: current === "brand" },
+    { label: "Settings", href: "/settings", current: current === "settings" },
   ];
   return (
     <div className="app">
