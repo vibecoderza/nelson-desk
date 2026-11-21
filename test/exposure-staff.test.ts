@@ -8,6 +8,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { decide, DEV_HOSTS, MACHINE_ROUTES, PUBLIC_PAGES, responseHeaders, surfaceForHost, type Decision, type Session } from "@/surface/access.ts";
 import { clerkKeys, clientRoleFromOrgRole, hostsFromEnv, secondFactorRequiredFromEnv, sessionFrom, staffEmailsFromEnv } from "@/surface/clerk.ts";
+import { previewDecide, previewLook, previewSurface } from "@/surface/preview.ts";
 import { sign, verify } from "@/events/signing.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -279,5 +280,54 @@ describe("what the Desk sends", () => {
     const app = filesUnder(path.join(ROOT, "app")).map(rel);
     expect(app.filter((f) => /robots|sitemap|manifest|opengraph|\.map$/.test(f))).toEqual([]);
     expect(readFileSync(path.join(ROOT, "next.config.ts"), "utf8")).toMatch(/productionBrowserSourceMaps:\s*false/);
+  });
+});
+
+describe("the preview look: a pull request on sample data, behind Vercel's login", () => {
+  const PREVIEW = { VERCEL_ENV: "preview", VERCEL_BRANCH_URL: "nelson-desk-git-a-branch-team.vercel.app", VERCEL_URL: "nelson-desk-abc123-team.vercel.app" };
+
+  test("a preview's two own addresses serve the two surfaces, and no other host does", () => {
+    expect(previewSurface(PREVIEW.VERCEL_BRANCH_URL, PREVIEW)).toBe("desk");
+    expect(previewSurface(PREVIEW.VERCEL_URL.toUpperCase() + ":443", PREVIEW)).toBe("portal");
+    for (const host of [null, undefined, "", "desk.dearnelson.co.za", "my.dearnelson.co.za", "nelson-desk.vercel.app", "evil.test", PREVIEW.VERCEL_URL + ".evil.test"]) {
+      expect(previewSurface(host, PREVIEW), String(host)).toBeNull();
+    }
+  });
+
+  test("it never answers on production, on a local run, or once anything real is configured", () => {
+    const asked = [PREVIEW.VERCEL_BRANCH_URL, PREVIEW.VERCEL_URL, "desk.dearnelson.co.za", "my.dearnelson.co.za"];
+    const closed: Record<string, string | undefined>[] = [
+      { ...PREVIEW, VERCEL_ENV: "production" },
+      { ...PREVIEW, VERCEL_ENV: "development" },
+      { ...PREVIEW, VERCEL_ENV: undefined },
+      { ...PREVIEW, VERCEL_ENV: "Preview" },
+      { ...PREVIEW, DATABASE_URL: "postgres://x" },
+      { ...PREVIEW, DATABASE_URL_PORTAL: "postgres://x" },
+      { ...PREVIEW, NELSON_BASE_URL: "https://nelson.example.test" },
+      { ...PREVIEW, VERCEL_BRANCH_URL: undefined },
+      { ...PREVIEW, VERCEL_URL: undefined },
+      { ...PREVIEW, VERCEL_URL: PREVIEW.VERCEL_BRANCH_URL },
+    ];
+    for (const env of closed) for (const host of asked) expect(previewSurface(host, env), `${JSON.stringify(env)} ${host}`).toBeNull();
+    expect(previewLook({ VERCEL_ENV: "production" })).toBe(false);
+    expect(previewLook({ VERCEL_ENV: "preview", DATABASE_URL: "postgres://x" })).toBe(false);
+    expect(previewLook({ VERCEL_ENV: "preview" })).toBe(true);
+  });
+
+  test("the live hosts are placed by the real front door first, so the preview look cannot stand in for it", () => {
+    const proxy = readFileSync(path.join(ROOT, "proxy.ts"), "utf8");
+    expect(proxy).toContain("const looking = surface ? null : previewSurface(");
+    expect(proxy.match(/previewSurface\(/g)).toHaveLength(1);
+  });
+
+  test("a preview serves pages and its own machine routes only", () => {
+    expect(previewDecide("desk", "/")).toEqual({ action: "page", rewriteTo: "/desk" });
+    expect(previewDecide("portal", "/quotes/Q-00007")).toEqual({ action: "page", rewriteTo: "/portal/quotes/Q-00007" });
+    expect(previewDecide("desk", "/api/health")).toEqual({ action: "machine", path: "/api/health" });
+    for (const p of ["/desk", "/desk/quotes", "/portal", "/portal/quotes", "/api/quotes", "/api/v1/price", "/sign-in", "/sign-in/x"]) {
+      expect(previewDecide("desk", p), p).toEqual({ action: "not_found" });
+      expect(previewDecide("portal", p), p).toEqual({ action: "not_found" });
+    }
+    expect(previewDecide("portal", "/api/v1/webhooks/nelson")).toEqual({ action: "not_found" });
   });
 });
