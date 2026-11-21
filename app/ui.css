@@ -370,3 +370,14 @@ select.field { appearance: auto; min-width: 0; }
 .logo-row { display: flex; flex-wrap: wrap; gap: var(--s3); }
 .logo-row img { height: 72px; max-width: 220px; object-fit: contain; padding: var(--s3); background: var(--card, #fff); border: 1px solid var(--line); border-radius: 12px; }
 @media (max-width: 560px) { .ask-site { grid-template-columns: 1fr; } }
+.shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s4); }
+.piece { display: grid; grid-template-rows: auto 1fr auto; background: var(--panel); border-radius: var(--r-panel); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.piece-picture { display: grid; place-items: center; aspect-ratio: 1; background: #fff; border-bottom: 1px solid var(--line); }
+.piece-picture img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.piece-picture.is-swatch { background: var(--well); }
+.piece-picture i { width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, .12); }
+.piece-words { display: grid; gap: 2px; align-content: start; justify-items: start; padding: var(--s3) var(--s4) 0; }
+.piece-words .chip { margin-top: var(--s1); }
+.piece-again { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2); padding: var(--s3) var(--s4) var(--s4); }
+@media (max-width: 560px) { .shop { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); } .piece-again { grid-template-columns: 1fr; } }
+.page.is-calm.is-shop { max-width: 980px; }

@@ -257,3 +257,17 @@ describe("the Portal's brand kit and artwork", () => {
     keep("portal-brand-read", html(createElement(BrandKitScreen, { view, said: null, confirm: noop, readSite: noop })));
   });
 });
+
+describe("the Portal's mockup shop", () => {
+  test("every piece once, ordered ones first, with Nelson's quoted price as the guide", async () => {
+    const { portalShop } = await import("@/portal/shop.ts");
+    const { ShopScreen } = await import("@/portal/shop-screens.tsx");
+    const view = (await portalShop(quotes, file, MOCK_PORTAL_CLIENT_ID, "all"))!;
+    expect(new Set(view.items.map((i) => i.id)).size).toBe(view.items.length);
+    expect(view.items.slice(0, view.counts.ordered).every((i) => i.ordered)).toBe(true);
+    expect(view.items.find((i) => i.name === "The Everyday Shopper")).toMatchObject({ guide: { unit_cents: 6000, quantity: 50 }, ordered: true });
+    expect(view.items.find((i) => i.name === "The Washed Dad Cap")).toMatchObject({ guide: { unit_cents: 17000, quantity: 25 }, ordered: false, from_ref: "Q-00014" });
+    expect((await portalShop(quotes, file, MOCK_PORTAL_CLIENT_ID, "ordered"))!.items.length).toBe(view.counts.ordered);
+    keep("portal-shop", html(createElement(ShopScreen, { view, said: null, again: noop })));
+  });
+});

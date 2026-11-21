@@ -24,7 +24,7 @@ function Rail({ items }: { items: NavItem[] }) {
 }
 
 export type DeskPlace = "today" | "inbox" | "quotes" | "orders" | "clients" | "suppliers" | "business";
-export type PortalPlace = "home" | "quotes" | "orders" | "artwork" | "brand";
+export type PortalPlace = "home" | "quotes" | "orders" | "shop" | "artwork" | "brand";
 
 export function DeskShell({ current, openQuotes, openOrders, waiting, children }: { current: DeskPlace; openQuotes: number; openOrders: number; waiting: number; children: ReactNode }) {
   const items: NavItem[] = [
@@ -53,6 +53,7 @@ export function PortalShell({ current, clientName, openQuotes, openOrders, conta
     { label: "Home", href: "/", current: current === "home" },
     { label: "Quotes", href: "/quotes", count: openQuotes, current: current === "quotes" },
     { label: "Orders", href: "/orders", count: openOrders, current: current === "orders" },
+    { label: "Mockup shop", href: "/shop", current: current === "shop" },
     { label: "Artwork", href: "/artwork", current: current === "artwork" },
     { label: "Brand kit", href: "/brand", current: current === "brand" },
   ];

@@ -38,6 +38,8 @@ import { mockArtwork, mockBrand, mockKits } from "@/mock/brand.ts";
 import { readSite } from "@/brand/read-site.ts";
 import { portalArtwork, portalBrandKit, portalSiteKit } from "@/portal/brand.ts";
 import { ArtworkScreen, BrandKitScreen } from "@/portal/brand-screens.tsx";
+import { portalShop, shopItems } from "@/portal/shop.ts";
+import { ShopScreen } from "@/portal/shop-screens.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const STAFF_TABLES = ["quote_line_staff", "quote_version_staff", "order_line_staff", "supplier", "costing_request", "costing_answer", "outbox", "webhook_inbox", "agent", "agent_log", "audit_log", "staff_user", "setting", "client_note", "brief", "enquiry", "follow_up", "template", "client_source"];
@@ -522,5 +524,56 @@ describe("the brand kit and artwork a client can open", () => {
     // Only the Portal's brand page reads a website.
     const walk = (dir: string): string[] => readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []);
     expect([...walk("src"), ...walk("app")].filter((f) => /fetchSite\(/.test(readFileSync(path.join(ROOT, f), "utf8"))).sort()).toEqual([path.join("app", "portal", "brand", "page.tsx"), path.join("src", "brand", "fetch-site.ts")]);
+  });
+});
+
+describe("the mockup shop a client can open", () => {
+  const NOW = new Date("2026-11-21T11:00:00Z");
+  const file = mockOrders(() => NOW);
+  const quotes = mockBook(() => NOW);
+  const noop = async () => {};
+  const STAFF_WORDS = /\b(margin|mark-?up|supplier|stock|cost|costs|costing|print house)\b/i;
+
+  test("the shop is clean for every client, as data and as HTML, and names no product code", async () => {
+    const clients = [...new Set(mockOrderList(NOW).map((o) => o.client.id)), "c_sandton"];
+    let seen = 0;
+    for (const client of clients) {
+      for (const filter of ["all", "ordered"] as const) {
+        const view = await portalShop(quotes, file, client, filter);
+        if (!view) continue;
+        const page = renderToStaticMarkup(createElement(ShopScreen, { view, said: null, again: noop }));
+        expect(leaksIn(view), client).toEqual([]);
+        expect(leaksInText(page), client).toEqual([]);
+        expect(page.match(STAFF_WORDS)?.[0] ?? null, client).toBeNull();
+        expect(page).not.toMatch(/NEL-[A-Z]{3}-/);
+        seen += view.items.length;
+      }
+    }
+    expect(seen).toBeGreaterThan(12);
+  });
+
+  test("a shop holds the client's own sent and ordered pieces: never a draft, never another client's", async () => {
+    const mine = await quotes.forClient(MOCK_PORTAL_CLIENT_ID);
+    const own = new Set([...mine.filter((q) => q.versions.length > 0).flatMap((q) => q.versions.at(-1)!.lines.map((l) => l.product_name)), ...(await file.forClient(MOCK_PORTAL_CLIENT_ID)).flatMap((o) => o.lines.map((l) => l.product_name))]);
+    const shop = (await portalShop(quotes, file, MOCK_PORTAL_CLIENT_ID, "all"))!;
+    expect(shop.items.length).toBeGreaterThanOrEqual(12);
+    for (const item of shop.items) expect(own.has(item.name), item.name).toBe(true);
+    for (const item of shop.items) expect(item.from_href).toMatch(/^\/(quotes\/Q-\d{5}|orders\/N-\d{4})$/);
+    expect(await portalShop(quotes, file, "c_nobody", "all")).toBeNull();
+    // A book that hands over everyone's quotes and orders still yields only this client's pieces.
+    const all = await quotes.all();
+    const crossed = await shopItems({ ...quotes, forClient: async () => all }, { ...file, forClient: async () => mockOrderList(NOW) }, MOCK_PORTAL_CLIENT_ID);
+    expect(crossed.items.map((i) => i.id).sort()).toEqual(shop.items.map((i) => i.id).sort());
+  });
+
+  test("a guide price is one Nelson quoted, at the quantity he quoted it for; ordering again opens a quote and prices nothing", () => {
+    const view = readFileSync(path.join(ROOT, "src/portal/shop.ts"), "utf8");
+    expect(view).not.toMatch(/Math\.(round|ceil|floor)\([^)]*cents|multipl|mark-?up|cents\s*[*\/]|[*\/]\s*\w+\.unit_cents/i);
+    const actions = readFileSync(path.join(ROOT, "src/portal/shop-actions.ts"), "utf8");
+    const exported = [...actions.matchAll(/export async function (\w+)\(form: FormData\): Promise<void> \{\n\s+const item = await ownItem\(form\);/g)].map((m) => m[1]);
+    expect(exported).toEqual(["orderAgain"]);
+    expect([...actions.matchAll(/export (?:async function|const) (\w+)/g)].map((m) => m[1])).toEqual(exported);
+    expect(actions).toMatch(/shopItems\(quoteBook\(\), orderFile\(\), portalClientId\(\)\)/);
+    expect(actions).not.toMatch(/unit_cents|cents/);
   });
 });
